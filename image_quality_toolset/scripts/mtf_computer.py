@@ -20,6 +20,7 @@ import os
 from pathlib import Path
 import configparser
 import ast
+from datetime import datetime, timezone
 
 import numpy as np
 import matplotlib.pyplot as plt
@@ -30,6 +31,34 @@ from algorithms.mtf_estimator.mtf_knife_edge import MtfKnifeEdge
 from algorithms.mtf_estimator.mtf_bridge import MtfBridge
 from algorithms.mtf_estimator.snr import SNR
 from algorithms.tools.raster_tools import roi_extraction, rasterize
+
+# Algorithm ids matching BaseMTFEstimatorAlgorithm.id() (provider id + algorithm name)
+# used to build debug figure filenames the same way as the QGIS algorithms.
+ALGORITHM_IDS = {
+    'MTF': 'imagequalitytoolset_MTFEstimatorKnifeEdge',
+    'MTF_BRIDGE': 'imagequalitytoolset_MTFEstimatorBridge',
+    'SNR': 'imagequalitytoolset_SNREstimator',
+}
+
+
+def save_debug_figures(mtf, debug_dir, method, feedback):
+    """
+    Save result figures to debug_dir, using the same naming convention as the
+    QGIS processing algorithms (BaseMTFEstimatorAlgorithm.process_results):
+    figure_<alg_id>_<yyyyMMdd_hhmmss>.png, figure2_<alg_id>_<yyyyMMdd_hhmmss>.png, ...
+    """
+    os.makedirs(debug_dir, exist_ok=True)
+    alg_id = ALGORITHM_IDS[method]
+    current_datetime_str = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
+
+    for idx, fig in enumerate(mtf.figure()):
+        suffix = "" if idx == 0 else str(idx + 1)
+        fig_filename = f"figure{suffix}_{alg_id}_{current_datetime_str}.png"
+        fig_filepath = os.path.join(debug_dir, fig_filename)
+        fig.savefig(fig_filepath)
+        feedback.pushInfo(f"Saved debug figure to: {fig_filepath}")
+        plt.close(fig)
+
 
 def process_algorithm(config_file, feedback=None):
     """
@@ -176,6 +205,9 @@ def process_algorithm(config_file, feedback=None):
             mtf.print_output()
         else:
             raise ValueError(f"Unknown method: {method}. Must be 'MTF', 'MTF_BRIDGE' or 'SNR'")
+
+    if debug_dir:
+        save_debug_figures(mtf, debug_dir, method, feedback)
 
     return mtf
 
