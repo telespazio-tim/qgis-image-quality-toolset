@@ -541,37 +541,6 @@ class MtfBridge(Mtf):
         self.psf_extent = (x_c[max_v] - x_c[min_v]) * pas
         return self.psf_extent
 
-    # ------------------------------------------------------------------
-    # Bridge-specific implementations
-    # ------------------------------------------------------------------
-
-    # def computeEsf(self):
-    #     """
-    #     Fit ESF model to the measured bridge profile.
-    #     Defaults to 'esf_to_eq_space_polynomial' since a bridge target
-    #     produces a pulse shape rather than a sigmoid edge.
-    #     """
-    #     x1 = self.x
-    #     R = self.nuage
-    #     passpline = self.sampling
-
-    #     if self.esf_model in self.ESF_MODEL_PARAMETRIC_FUNCTIONS:
-    #         self.esf_func = self.ESF_MODEL_PARAMETRIC_FUNCTIONS[self.esf_model]
-    #         xs, esfP, R2, RMS, x_cut, y_cut = self.esf_func(x1, R, passpline)
-    #     elif self.esf_model in self.ESF_MODEL_FUNCTIONS:
-    #         self.esf_func = self.ESF_MODEL_FUNCTIONS[self.esf_model]
-    #         xs, esfP, R2, RMS = self.esf_func(x1, R)
-
-    #     self.x_esf0 = xs
-    #     self.x_esf = xs
-    #     self.y_esf0 = esfP
-    #     self.R2 = R2
-    #     self.RMS = RMS
-
-    #     self.bkg = np.min(esfP)
-    #     self.console(f" Value of the background: {self.bkg}")
-    #     self.y_esf = esfP - self.bkg
-
     def computeLsf(self):
         """
         For a bridge target the fitted ESF IS the LSF — no differentiation step.
@@ -618,8 +587,12 @@ class MtfBridge(Mtf):
 
         y_output = self.y_lsf
 
-        fft_input = np.fft.fft(self.yo_input)
-        fft_output = np.fft.fft(y_output)
+        # Normalize signals by their sum (as in do_ratio_of_modulus)
+        yo_input_norm = self.yo_input / np.sum(self.yo_input)
+        y_output_norm = y_output / np.sum(y_output)
+
+        fft_input = np.absolute(np.fft.fft(yo_input_norm))
+        fft_output = np.absolute(np.fft.fft(y_output_norm))
 
         # Frequency axis in cycles/pixel; keep all positive frequencies
         f = np.fft.fftfreq(len(y_output), self.sampling)
@@ -635,13 +608,17 @@ class MtfBridge(Mtf):
         u = k_local_max[m_k_max]
         local_max_indice = np.array([np.argmin(np.abs(f[mask] - k)) for k in u])
 
-        self.fft_output_masked = fft_output[mask]
-        self.fft_input_masked = fft_input[mask]
+        # Normalize each spectrum by its DC component before taking the ratio
+        fft_input_norm = fft_input / fft_input[0]
+        fft_output_norm = fft_output / fft_output[0]
 
-        self.fft_input = fft_input
-        self.fft_output = fft_output
+        self.fft_output_masked = fft_output_norm[mask]
+        self.fft_input_masked = fft_input_norm[mask]
 
-        R_1 = np.divide(fft_output, fft_input)
+        self.fft_input = fft_input_norm
+        self.fft_output = fft_output_norm
+
+        R_1 = np.divide(fft_output_norm, fft_input_norm)
         R_1_masked = np.absolute(R_1[mask])
         R_2_masked_max = np.absolute(R_1[local_max_indice])
         self._mtf = np.absolute(R_1_masked/np.max(R_1_masked))
@@ -660,6 +637,7 @@ class MtfBridge(Mtf):
         self.R2_smoothed = mtf_sincexp(self.display_frequencies, d_fit, lbd)
 
         self._lsf = np.fft.ifftshift(R_1)
+        self._lsf_reconstructed = self.computeLsfReconstruct(R_1)
         self.f = f[mask]
 
         # MTF at Nyquist (0.5 cycles/pixel) via linear interpolation
@@ -687,6 +665,32 @@ class MtfBridge(Mtf):
         self.MTF50 = a * 0.5 + b
 
         return self.mtf
+
+    def computeLsfReconstruct(self, R_1):
+        """
+        Reconstruct the LSF from the complex FFT ratio R_1 = FFT(output) / FFT(input).
+
+        Steps (ported from do_lsf_reconstruct):
+          1. Replace non-finite values by interpolating from neighbours.
+          2. Zero out entries where |R_1| > 1 (non-physical response).
+          3. Return |ifftshift(R_1_cleaned)|.
+        """
+        R = R_1.copy()
+
+        # Replace inf / nan by average of neighbouring values
+        bad = ~np.isfinite(R)
+        bad_idx = np.where(bad)[0]
+        if len(bad_idx):
+            lo = np.clip(bad_idx - 1, 0, len(R) - 1)
+            hi = np.clip(bad_idx + 1, 0, len(R) - 1)
+            amp = (np.abs(R[lo]) + np.abs(R[hi])) / 2
+            angle = (np.angle(R[lo]) + np.angle(R[hi])) / 2
+            R[bad_idx] = amp * np.exp(1j * angle)
+
+        # Zero out non-physical values
+        R[np.abs(R) > 1] = 0
+
+        return np.fft.ifftshift(R)
 
     def figure(self, gsd=None):
         """Generate result figures for bridge MTF."""
@@ -783,11 +787,10 @@ class MtfBridge(Mtf):
         plt.ylabel('Normalized Module', fontname="Times New Roman", fontweight="bold", fontsize=20)
         plt.legend(fontsize=10)
 
-        # --- Subplot 4: ESF fit ---
+        # --- Subplot 4: LSF reconstruct ---
         plt.subplot(2, 3, 4)
-        plt.plot(self.x_lsf[1:],np.abs(self._lsf)[1:],label = 'Rebuild LSF')
-        # plt.plot(sc * (self.x - ox_esf), self.nuage, 'o', label='Original ESF')
-        # plt.plot(sc * (self.x_esf0 - ox_esf), self.y_esf0, '+', label='Fitted ESF')
+        plt.plot(self.x_lsf[1:], np.abs(self._lsf)[1:], '+', label='LSF')
+        plt.plot(self.x_lsf[1:], np.abs(self._lsf_reconstructed)[1:], label='Reconstructed LSF')
         plt.title('LSF', fontname="Times New Roman", fontweight="bold", fontsize=20)
         plt.xlabel('Pixels')
         plt.legend()
