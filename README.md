@@ -1,5 +1,30 @@
 # Image Quality Toolset — MTF & SNR Computation
 
+## Abstract
+
+> *EDAP Image Quality Toolset: Supporting the Monitoring of Level-1 Image Quality Performance*
+>
+> Saunier Sébastien¹, Romain Degoul¹, Charlotte Broussou¹, Leonardo De Laurentiis²
+> ¹ Telespazio France · ² ESA/ESRIN, Italy
+
+A fundamental function of an optical remote sensing sensor relies on its ability to discern ground objects in agreement with Earth Observation mission design specifications. In the community, this notion is addressed by using spatial resolution analysis technics.
+
+From user perspective, analysis requires a good knowledge of Level 1 data quality metrics.
+
+Taken benefits of knowledge and experience learnt with Image Quality analysis undertook within the framework of the EDAP / EDAP+ project [[1]](#ref-1), best practice documents [[2]](#ref-2), [[3]](#ref-3), [[4]](#ref-4), and also inter comparison exercise activities made with CEOS members [[5]](#ref-5), the idea of developing an open-source tool dedicated to image quality analysis merged.
+
+The objective of this presentation is to showcase the Image Quality Toolset software solution [[6]](#ref-6). Developed in the context of the ESA Artificial Intelligence for Quality Control (AI4QC project), this software proposes functionalities to estimate IQ related parameters as Modulation Transfer Function (MTF), Full Width at Half Maximum (FWHM), Signal to Noise Ratio (SNR).
+
+A key advantage of this product is its operational flexibility, as it can be used either through the graphical interface of Quantum Geographic Information System (QGIS) or via a command-line interface. It has been developed for remote sensing Calibration / Validation users as a supporting tool for Quality Control (QC) of satellite image.
+
+The development of this tool required a substantial amount of efforts spent in different and various areas, including the s/w architecture, functions external resources, the test dataset production (simulation), and the proposed MTF and SNR algorithms and validation results.
+
+A second advantage of this tool is to generate standardized MTF/SNR reports that can be shared across the community and understood at a broader scale.
+
+The Image Quality Toolset was inspired by the QGIS MTF Tool [[7]](#ref-7), as the goal was to enable operators to assess product performance efficiently and consistently. Finally, the concept has been extended; the tool estimates more parameters, computes more metrics, implements more methods (MTF Knife Edge, MTF Bridge, SNR JACIE, SNR FFT …) and proposes users to select among a large diversity of models (edge models for instance).
+
+---
+
 ## 1. Overview
 
 The Image Quality Toolset is a QGIS plugin developed in the context of the ESA **AI4QC** project. It is an open-source plugin interfacing with the Quantum Geographic Information System (**QGIS**) software, aimed at computing image quality metrics to establish sensor performance. It has been developed for remote sensing Calibration / Validation users as a supporting tool for Quality Control (**QC**) of satellite image.
@@ -562,5 +587,17 @@ The final version of the plugin will include:
 2. **MTF computation from a pulse ROI** — MTF Pulse Method (implemented).
 3. **SNR computation** — SNR Method (implemented).
 4. **Automatic installation** via QGIS Plugin Manager (planned).
+
+---
+
+## 11. References
+
+1. <a id="ref-1"></a>ESA ESAP [VHR HR and MR Optical missions webpage](https://earth.esa.int/eogateway/activities/edap/vhr-hr-mr-optical-missions), including access to Technical notes.
+2. <a id="ref-2"></a>JACIE Best Practices for Remote Sensing System Evaluation and Reporting, Open-File Report 2024-1023.
+3. <a id="ref-3"></a>Earth Observation Mission Quality Assessment Framework – Optical Guidelines, EDAP.REP.002, 2021.
+4. <a id="ref-4"></a>[CEOS Cal/Val portal](https://calvalportal.ceos.org/fr/web/guest/calibration-test-sites) — Calibration Test Sites, Image Quality Workpackage.
+5. <a id="ref-5"></a>F. Viallefont-Robinet et al., "Comparison of MTF measurements using edge method: towards reference data set", *Optics Express*, vol. 26, n° 26, p. 33625‑33648, 2018, doi: [10.1364/OE.26.033625](https://doi.org/10.1364/OE.26.033625).
+6. <a id="ref-6"></a>[Telespazio / ESA Image Quality Toolset Software](https://github.com/telespazio-tim/qgis-image-quality-toolset).
+7. <a id="ref-7"></a>[Jorge Gil MTF Estimator](https://plugins.qgis.org/plugins/mtf_estimator/).
 
 ---
