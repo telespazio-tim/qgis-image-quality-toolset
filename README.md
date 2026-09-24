@@ -13,15 +13,11 @@ From user perspective, analysis requires a good knowledge of Level 1 data qualit
 
 Taken benefits of knowledge and experience learnt with Image Quality analysis undertook within the framework of the EDAP / EDAP+ project [[1]](#ref-1), best practice documents [[2]](#ref-2), [[3]](#ref-3), [[4]](#ref-4), and also inter comparison exercise activities made with CEOS members [[5]](#ref-5), the idea of developing an open-source tool dedicated to image quality analysis merged.
 
-The objective of this presentation is to showcase the Image Quality Toolset software solution [[6]](#ref-6). Developed in the context of the ESA Artificial Intelligence for Quality Control (AI4QC project), this software proposes functionalities to estimate IQ related parameters as Modulation Transfer Function (MTF), Full Width at Half Maximum (FWHM), Signal to Noise Ratio (SNR).
-
 A key advantage of this product is its operational flexibility, as it can be used either through the graphical interface of Quantum Geographic Information System (QGIS) or via a command-line interface. It has been developed for remote sensing Calibration / Validation users as a supporting tool for Quality Control (QC) of satellite image.
 
-The development of this tool required a substantial amount of efforts spent in different and various areas, including the s/w architecture, functions external resources, the test dataset production (simulation), and the proposed MTF and SNR algorithms and validation results.
+An advantage of this tool is to generate standardized MTF/SNR reports that can be shared across the community and understood at a broader scale.
 
-A second advantage of this tool is to generate standardized MTF/SNR reports that can be shared across the community and understood at a broader scale.
-
-The Image Quality Toolset was inspired by the QGIS MTF Tool [[7]](#ref-7), as the goal was to enable operators to assess product performance efficiently and consistently. Finally, the concept has been extended; the tool estimates more parameters, computes more metrics, implements more methods (MTF Knife Edge, MTF Bridge, SNR JACIE, SNR FFT …) and proposes users to select among a large diversity of models (edge models for instance).
+The Image Quality Toolset was inspired by the QGIS MTF Tool [[7]](#ref-7), as the goal was to enable operators to assess product performance efficiently and consistently.
 
 ---
 
