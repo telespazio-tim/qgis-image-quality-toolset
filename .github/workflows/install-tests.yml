@@ -1,0 +1,34 @@
+name: install-tests
+
+on:
+  push:
+    branches: [develop]
+  pull_request:
+    branches: [develop]
+
+jobs:
+  install:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]  # linux / win64 / osx
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        shell: bash -el {0}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: conda-incubator/setup-miniconda@v3
+        with:
+          miniforge-version: latest
+          channels: conda-forge
+          channel-priority: strict
+          activate-environment: mtf
+      - name: Install QGIS and dependencies
+        run: |
+          conda install -y "qgis>=3.40" numpy scipy matplotlib scikit-image pip
+          pip install loess==2.1.2
+      - name: Install plugin and smoke test
+        env:
+          QT_QPA_PLATFORM: offscreen
+        run: python test/test_install.py
