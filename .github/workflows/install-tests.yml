@@ -31,4 +31,10 @@ jobs:
       - name: Install plugin and smoke test
         env:
           QT_QPA_PLATFORM: offscreen
-        run: python test/test_install.py
+        run: |
+          # conda-forge qgis on Windows keeps its Python bindings under Library/
+          if [ "$RUNNER_OS" = Windows ]; then
+            export PYTHONPATH="$CONDA_PREFIX\\Library\\python;$CONDA_PREFIX\\Library\\python\\plugins"
+            export QGIS_PREFIX_PATH="$CONDA_PREFIX\\Library"
+          fi
+          python test/test_install.py
