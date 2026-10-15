@@ -122,6 +122,21 @@ class DependencyChecker:
             elif os.path.exists(python_w):
                 python_executable = python_w
 
+        # On macOS/Linux bundles sys.executable is the QGIS binary itself:
+        # running "QGIS -m pip ..." would start a new QGIS (which reloads the
+        # plugin and spawns another one, endlessly). Find a real Python.
+        if not os.path.basename(python_executable).lower().startswith("python"):
+            exe_dir = os.path.dirname(sys.executable)
+            candidates = [
+                os.path.join(sys.exec_prefix, "bin", "python3"),
+                os.path.join(sys.prefix, "bin", "python3"),
+                os.path.join(exe_dir, "bin", "python3"),
+                os.path.join(exe_dir, "python3"),
+            ]
+            python_executable = next((c for c in candidates if os.path.exists(c)), None)
+            if python_executable is None:
+                raise RuntimeError("No Python interpreter found to run pip")
+
         return [python_executable, "-m", "pip"]
 
     def _parse_version(self, version_str: str) -> Tuple[int, ...]:
@@ -276,7 +291,13 @@ class DependencyChecker:
         callback: Optional[Callable[[str], None]] = None,
     ) -> Tuple[bool, str]:
         """Install a single dependency."""
-        pip_cmd = self._get_pip_command()
+        try:
+            pip_cmd = self._get_pip_command()
+        except RuntimeError as e:
+            msg = f"✗ Cannot install {info.name}: {e}"
+            if callback:
+                callback(msg)
+            return False, msg
         package_spec = info.package
 
         # If it was installed but version was too low, we need to upgrade
