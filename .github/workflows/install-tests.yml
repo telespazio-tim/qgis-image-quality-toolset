@@ -28,7 +28,7 @@ jobs:
         run: |
           conda install -y "qgis>=3.40" numpy scipy matplotlib scikit-image pip
           pip install loess==2.1.2
-      - name: Install plugin and smoke test
+      - name: Install plugin, smoke test and run algorithms
         env:
           QT_QPA_PLATFORM: offscreen
         run: |
@@ -38,3 +38,4 @@ jobs:
             export QGIS_PREFIX_PATH="$CONDA_PREFIX\\Library"
           fi
           python test/test_install.py
+          python test/test_algorithms.py
