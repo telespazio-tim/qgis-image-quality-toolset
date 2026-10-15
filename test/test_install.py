@@ -29,6 +29,9 @@ def main():
     app = QgsApplication([], False)
     app.initQgis()
     try:
+        # the "processing" plugin is not on sys.path outside a running QGIS, and the
+        # plugin package imports it at load time (see result_dockwidget.py)
+        sys.path.append(os.path.join(QgsApplication.pkgDataPath(), "python", "plugins"))
         sys.path.insert(0, plugins)
         import image_quality_toolset as plugin
 
