@@ -94,12 +94,18 @@ jobs:
   # The bundle needs a recent macOS, so failures on macos-14 are expected to show the
   # "built for Mac OS X 15.0" libc++ error. Not blocking: bundle paths may need tuning.
   dmg:
+    name: dmg (${{ matrix.os }}, ${{ matrix.qgis }} ${{ matrix.channel }})
     continue-on-error: true
     strategy:
       fail-fast: false
       matrix:
         os: [macos-14, macos-15, macos-26]
+        # ltr = Long Term Release (stable, bug fixes only), pr = Point Release (latest, newest features).
+        # The major version of each is an assumption: check the version in the run summary.
         channel: [ltr, pr]   # https://qgis.org/downloads/macos/qgis-macos-<channel>.dmg
+        include:  # adds the label to the matching channel
+          - {channel: ltr, qgis: qgis3}
+          - {channel: pr, qgis: qgis4}
     runs-on: ${{ matrix.os }}
     env:
       QT_QPA_PLATFORM: offscreen
