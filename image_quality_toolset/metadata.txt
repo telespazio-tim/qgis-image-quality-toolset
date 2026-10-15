@@ -29,7 +29,6 @@ supportsQt6=True
 hasProcessingProvider=yes
 experimental=False
 deprecated=False
-plugin_dependencies=
 changelog=
     ImageQualityToolset 1.0 - Initial release.
         - MTF Knife Edge Method: computes MTF from a sharp-edge ROI with parametric (sigmoid, tanh, Fermi, erf, Gaussian-exponential) and non-parametric (Loess, polynomial) ESF models. Reports MTF@Nyquist, MTF30, MTF50, FWHM, RER, HEE, SNR, and R².
