@@ -14,7 +14,7 @@ about=The Image Quality Toolset is a QGIS plugin developed in the context of the
 
     The plugin uses a dual-license model: the QGIS integration layer is released under GPL v3; the core signal-processing algorithms (MTF, SNR, ESF models, variogram) are released under Apache 2.0.
 version=1.0
-qgisMinimumVersion=3.0
+qgisMinimumVersion=3.38
 author=Telespazio TIM
 email=sen2like@telespazio.com
 category=Analysis
