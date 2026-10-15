@@ -114,6 +114,7 @@ jobs:
           ls "$MNT"
           cp -R "$MNT"/QGIS*.app /Applications/
           ls -d /Applications/QGIS*.app
+          defaults read /Applications/QGIS*.app/Contents/Info CFBundleShortVersionString | tee -a "$GITHUB_STEP_SUMMARY"
       - name: Install extra dependencies in the bundle Python
         run: |
           APP=$(ls -d /Applications/QGIS*.app | head -1)
