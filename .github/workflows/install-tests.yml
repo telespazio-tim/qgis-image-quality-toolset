@@ -8,14 +8,15 @@ on:
 
 jobs:
   install:
+    name: install (${{ matrix.os }}, qgis${{ matrix.qgis }})
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, windows-latest, macos-14, macos-15, macos-15-intel, macos-26]  # linux / win64 / osx (arm64 + intel)
+        os: [ubuntu-22.04, ubuntu-24.04, windows-latest, macos-14, macos-15, macos-15-intel, macos-26]  # linux / win64 / osx (arm64 + intel)
         qgis: ["3", "4"]  # one plugin zip per platform and QGIS major version
         include:
           # runners that publish a zip (macos-14 = oldest arm64, widest wheel compatibility)
-          - {os: ubuntu-latest, platform: linux-x64, package: true}
+          - {os: ubuntu-22.04, platform: linux-x64, package: true}  # oldest LTS = lowest glibc
           - {os: windows-latest, platform: win-x64, package: true}
           - {os: macos-14, platform: macos-arm64, package: true}
           - {os: macos-15-intel, platform: macos-x64, package: true}
