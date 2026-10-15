@@ -11,13 +11,15 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]  # linux / win64 / osx
+        os: [ubuntu-latest, windows-latest, macos-14, macos-15, macos-15-intel, macos-26]  # linux / win64 / osx (arm64 + intel)
     runs-on: ${{ matrix.os }}
     defaults:
       run:
         shell: bash -el {0}
     steps:
       - uses: actions/checkout@v4
+      - name: Show OS version
+        run: uname -a; if [ "$RUNNER_OS" = macOS ]; then sw_vers; fi
       - uses: conda-incubator/setup-miniconda@v3
         with:
           miniforge-version: latest
@@ -39,3 +41,41 @@ jobs:
           fi
           python test/test_install.py
           python test/test_algorithms.py
+
+  # Official QGIS .dmg (the bundle end users install), as opposed to conda-forge above.
+  # The bundle needs a recent macOS, so failures on macos-14 are expected to show the
+  # "built for Mac OS X 15.0" libc++ error. Not blocking: bundle paths may need tuning.
+  dmg:
+    continue-on-error: true
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-14, macos-15, macos-26]
+        channel: [ltr, pr]   # https://qgis.org/downloads/macos/qgis-macos-<channel>.dmg
+    runs-on: ${{ matrix.os }}
+    env:
+      QT_QPA_PLATFORM: offscreen
+    steps:
+      - uses: actions/checkout@v4
+      - name: Show OS version
+        run: sw_vers
+      - name: Install official QGIS dmg
+        run: |
+          curl -fL -o qgis.dmg "https://qgis.org/downloads/macos/qgis-macos-${{ matrix.channel }}.dmg"
+          MNT=$(hdiutil attach qgis.dmg -nobrowse | grep -o '/Volumes/.*' | head -1)
+          ls "$MNT"
+          cp -R "$MNT"/QGIS*.app /Applications/
+          ls -d /Applications/QGIS*.app
+      - name: Install extra dependencies in the bundle Python
+        run: |
+          APP=$(ls -d /Applications/QGIS*.app | head -1)
+          PY=$(ls "$APP"/Contents/MacOS/bin/python3 "$APP"/Contents/Frameworks/bin/python3 2>/dev/null | head -1)
+          echo "APP=$APP" >> "$GITHUB_ENV"; echo "PY=$PY" >> "$GITHUB_ENV"
+          "$PY" --version
+          "$PY" -m pip install --target "$RUNNER_TEMP/extra" loess==2.1.2 scikit-image
+      - name: Install plugin and run tests with the bundle Python
+        run: |
+          export PYTHONPATH="$APP/Contents/Resources/python:$APP/Contents/Resources/python/plugins:$RUNNER_TEMP/extra"
+          export QGIS_PREFIX_PATH="$APP/Contents/MacOS"
+          "$PY" test/test_install.py
+          "$PY" test/test_algorithms.py
