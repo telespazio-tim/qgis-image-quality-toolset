@@ -12,7 +12,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-22.04, ubuntu-24.04, windows-latest, macos-14, macos-15, macos-15-intel, macos-26]  # linux / win64 / osx (arm64 + intel)
+        os: [ubuntu-22.04, ubuntu-24.04, ubuntu-26.04, windows-latest, macos-14, macos-15, macos-15-intel, macos-26]  # linux / win64 / osx (arm64 + intel)
         qgis: ["3", "4"]  # one plugin zip per platform and QGIS major version
         include:
           # runners that publish a zip (macos-14 = oldest arm64, widest wheel compatibility)
