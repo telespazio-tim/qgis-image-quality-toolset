@@ -69,7 +69,19 @@ jobs:
       - name: Install extra dependencies in the bundle Python
         run: |
           APP=$(ls -d /Applications/QGIS*.app | head -1)
-          PY=$(ls "$APP"/Contents/MacOS/bin/python3 "$APP"/Contents/Frameworks/bin/python3 2>/dev/null | head -1)
+          # The interpreter moved across QGIS releases: recent bundles ship
+          # Contents/MacOS/python (a wrapper that sets PYTHONHOME), older ones
+          # used Contents/MacOS/bin/python3 or Contents/Frameworks/bin/python3.
+          # See https://github.com/qgis/QGIS/issues/62927
+          PY=""
+          for cand in "$APP/Contents/MacOS/python" "$APP/Contents/MacOS/bin/python3" "$APP/Contents/Frameworks/bin/python3"; do
+            if [ -x "$cand" ]; then PY="$cand"; break; fi
+          done
+          if [ -z "$PY" ]; then
+            echo "No Python interpreter found under $APP/Contents; candidates were:" >&2
+            find "$APP/Contents" -maxdepth 3 \( -name 'python3*' -o -name python \) >&2
+            exit 1
+          fi
           echo "APP=$APP" >> "$GITHUB_ENV"; echo "PY=$PY" >> "$GITHUB_ENV"
           "$PY" --version
           "$PY" -m pip install --target "$RUNNER_TEMP/extra" loess==2.1.2 scikit-image
