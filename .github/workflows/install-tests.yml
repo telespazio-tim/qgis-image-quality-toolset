@@ -87,8 +87,13 @@ jobs:
           "$PY" -m pip install --target "$RUNNER_TEMP/extra" loess==2.1.2 scikit-image
       - name: Install plugin and run tests with the bundle Python
         run: |
-          export PYTHONPATH="$APP/Contents/Resources/python:$APP/Contents/Resources/python/plugins:$RUNNER_TEMP/extra"
-          export QGIS_PREFIX_PATH="$APP/Contents/MacOS"
+          # QGIS 4 installs its data (including the processing plugin) under
+          # Contents/Resources/qgis, and the bundle prefix is the .app root
+          # itself -- not Contents/MacOS. The python bindings live in the
+          # Frameworks site-packages and are already picked up by $PY
+          # (Contents/MacOS/python). See QgsApplication/QGIS_MAC_BUNDLE.
+          export PYTHONPATH="$APP/Contents/Resources/qgis/python/plugins:$APP/Contents/Resources/python/plugins:$RUNNER_TEMP/extra"
+          export QGIS_PREFIX_PATH="$APP"
           "$PY" test/test_install.py
           "$PY" test/test_algorithms.py
 
