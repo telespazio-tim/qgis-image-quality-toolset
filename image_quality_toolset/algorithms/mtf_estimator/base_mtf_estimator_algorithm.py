@@ -87,6 +87,11 @@ class BaseMTFEstimatorAlgorithm(QgsProcessingAlgorithm):
     def icon(self) -> QIcon:
         return self._icon
 
+    def flags(self):
+        # Run on the main thread: numpy/OpenBLAS overflows the 512 KB stack of
+        # Qt pool threads on macOS (SIGBUS "Thread stack size exceeded").
+        return super().flags() | QgsProcessingAlgorithm.FlagNoThreading
+
     def initAlgorithm(self, config=None):
         self.addParameter(QgsProcessingParameterRasterLayer(self.RASTER, self.tr("Raster layer")))
         self.addParameter(QgsProcessingParameterBand(self.BAND, self.tr("Band number"), 1, self.RASTER))
