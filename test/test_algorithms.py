@@ -14,7 +14,9 @@ os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 DATA = os.path.join(HERE, "data")
-sys.path.insert(0, os.path.join(HERE, ".."))
+PARENT = os.environ.get("IQT_PLUGIN_PARENT") or os.path.join(HERE, "..")  # see test_install.py
+sys.path.insert(0, PARENT)
+sys.path.append(os.path.join(PARENT, "image_quality_toolset", "dependencies"))  # as the plugin does at startup
 
 from qgis.core import (  # noqa: E402
     QgsApplication, QgsProcessingAlgorithm, QgsProcessingContext,
@@ -26,6 +28,10 @@ CASES = {
     "knife_edge_target1": ("MTFEstimatorKnifeEdge",
         "target1/T32TNR_20250619T101559_B04_10m_mtf_roi.tiff", "target1/shapefile/mtf_al_bagnolo.shp",
         dict(SCALE=0.01, OFFSET=0, PX_MARGIN=0, EDGE_DIRECTION=0, ESF_MODEL=0, SAMPLING=0.2),
+        ["MTF_NYQ", "MTF50"]),
+    "knife_edge_loess": ("MTFEstimatorKnifeEdge",  # needs the bundled loess
+        "target1/T32TNR_20250619T101559_B04_10m_mtf_roi.tiff", "target1/shapefile/mtf_al_bagnolo.shp",
+        dict(SCALE=0.01, OFFSET=0, PX_MARGIN=0, EDGE_DIRECTION=0, ESF_MODEL=5, SAMPLING=0.2),
         ["MTF_NYQ", "MTF50"]),
     "snr_target4": ("SNREstimator",
         "target4/LC09_L1TP_181040_20211121_20230505_02_T1_B5_rad_crop_2.tif", "target4/shapefile/ROI.shp",
@@ -78,6 +84,9 @@ def main():
         # the "processing" plugin is not on sys.path outside a running QGIS
         sys.path.append(os.path.join(QgsApplication.pkgDataPath(), "python", "plugins"))
         pip_command_never_runs_qgis()
+        # the bridge method's compiled dependency (no bridge sample data, so import it here)
+        from skimage.filters import threshold_otsu  # noqa: F401
+        from skimage.morphology import binary_opening, disk, skeletonize  # noqa: F401
         import image_quality_toolset as plugin
         from processing.core.Processing import Processing
         Processing.initialize()

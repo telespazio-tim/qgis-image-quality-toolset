@@ -12,7 +12,8 @@ os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
 from qgis.core import QgsApplication  # noqa: E402
 
-SRC = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "image_quality_toolset")
+# IQT_PLUGIN_PARENT: folder holding the plugin to test (CI points it at the unzipped release zip)
+SRC = os.path.join(os.environ.get("IQT_PLUGIN_PARENT") or os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."), "image_quality_toolset")
 NAME = "image_quality_toolset"
 
 

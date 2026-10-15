@@ -49,7 +49,7 @@ jobs:
           fi
           python test/test_install.py
           python test/test_algorithms.py
-      # numpy/scipy/matplotlib come from QGIS; loess and scikit-image (compiled, so tied to
+      # numpy/scipy/matplotlib (and its dependencies) come from QGIS; loess and scikit-image (compiled, so tied to
       # platform and Python version) are bundled where the plugin looks: <plugin>/dependencies
       - name: Build plugin zip
         if: matrix.package
@@ -59,11 +59,31 @@ jobs:
           find build -name __pycache__ -prune -exec rm -rf {} +
           D=build/image_quality_toolset/dependencies
           pip install --target "$D" loess==2.1.2 scikit-image
-          rm -rf "$D"/bin "$D"/numpy* "$D"/scipy*
+          (cd "$D" && rm -rf bin numpy* scipy* matplotlib* mpl_toolkits pylab.py contourpy* cycler* kiwisolver* fontTools fonttools* dateutil python_dateutil* pyparsing* six.py)
           V=$(grep '^version=' image_quality_toolset/metadata.txt | cut -d= -f2)
           mkdir -p out
           python -c "import shutil,sys; shutil.make_archive(sys.argv[1], 'zip', 'build', 'image_quality_toolset')" \
             "out/image_quality_toolset-$V-${{ matrix.platform }}-qgis${{ matrix.qgis }}"
+      # Install from the zip as a user would: remove the dependencies from the environment so only
+      # the zip can provide them, forbid pip downloads, then start the plugin and run the algorithms.
+      - name: Test the plugin zip
+        if: matrix.package
+        env:
+          QT_QPA_PLATFORM: offscreen
+          PIP_NO_INDEX: "1"
+        run: |
+          if [ "$RUNNER_OS" = Windows ]; then
+            export PYTHONPATH="$CONDA_PREFIX\\Library\\python;$CONDA_PREFIX\\Library\\python\\plugins"
+            export QGIS_PREFIX_PATH="$CONDA_PREFIX\\Library"
+          fi
+          pip uninstall -y loess scikit-image imageio tifffile lazy_loader networkx
+          if python -c "import loess" 2>/dev/null; then echo "loess still in the environment" >&2; exit 1; fi
+          mkdir unzipped
+          python -c "import glob,zipfile; zipfile.ZipFile(glob.glob('out/*.zip')[0]).extractall('unzipped')"
+          export IQT_PLUGIN_PARENT="$PWD/unzipped"
+          python test/test_install.py
+          python test/test_gui.py
+          python test/test_algorithms.py
       - uses: actions/upload-artifact@v4
         if: matrix.package
         with:
