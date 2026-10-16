@@ -199,7 +199,7 @@ jobs:
         run: sw_vers
       - name: Install official QGIS dmg
         run: |
-          curl -fL -o qgis.dmg "https://qgis.org/downloads/macos/qgis-macos-${{ matrix.channel }}.dmg"
+          curl -fL --retry 6 --retry-delay 20 --retry-all-errors --connect-timeout 30 -o qgis.dmg "https://qgis.org/downloads/macos/qgis-macos-${{ matrix.channel }}.dmg"
           MNT=$(hdiutil attach qgis.dmg -nobrowse | grep -o '/Volumes/.*' | head -1)
           ls "$MNT"
           cp -R "$MNT"/QGIS*.app /Applications/
@@ -282,11 +282,11 @@ jobs:
         run: |
           [ "${{ matrix.channel }}" = ltr ] && REPO=ubuntu-ltr || REPO=ubuntu
           sudo mkdir -m755 -p /etc/apt/keyrings
-          sudo wget -qO /etc/apt/keyrings/qgis-archive-keyring.gpg https://download.qgis.org/downloads/qgis-archive-keyring.gpg
+          sudo wget -q --tries=6 --waitretry=20 --retry-connrefused --retry-on-http-error=429,500,502,503,504 -O /etc/apt/keyrings/qgis-archive-keyring.gpg https://download.qgis.org/downloads/qgis-archive-keyring.gpg
           printf 'Types: deb\nURIs: https://qgis.org/%s\nSuites: noble\nArchitectures: amd64\nComponents: main\nSigned-By: /etc/apt/keyrings/qgis-archive-keyring.gpg\n' "$REPO" \
             | sudo tee /etc/apt/sources.list.d/qgis.sources
-          sudo apt-get update
-          sudo apt-get install -y qgis python3-qgis python3-numpy python3-scipy python3-matplotlib
+          sudo apt-get -o Acquire::Retries=6 update
+          sudo apt-get -o Acquire::Retries=6 install -y qgis python3-qgis python3-numpy python3-scipy python3-matplotlib
       - name: QGIS version
         run: |
           export PYTHONPATH=/usr/share/qgis/python
