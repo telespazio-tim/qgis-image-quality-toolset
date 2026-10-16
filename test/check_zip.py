@@ -31,6 +31,8 @@ def check(path):
     assert not missing, f"metadata.txt is missing {missing}"
     assert f"{root}/{g['icon']}" in names, f"icon {g['icon']} not in the zip"
     assert re.fullmatch(r"\d+(\.\d+)*", g["qgisMinimumVersion"]), "bad qgisMinimumVersion"
+    # QGIS assumes <major>.99 when there is no maximum: the plugin would be disabled on QGIS 4
+    assert float(g.get("qgisMaximumVersion", "0").rsplit(".", 1)[0] or 0) >= 4, "qgisMaximumVersion must cover QGIS 4 (4.99)"
 
     mb = sum(i.file_size for i in z.infolist()) / 1e6
     print(f"OK: {path}: {root} {g['version']}, {len(names)} files, {mb:.0f} MB unpacked")
