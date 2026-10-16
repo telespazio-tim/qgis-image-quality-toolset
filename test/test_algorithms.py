@@ -16,7 +16,8 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 DATA = os.path.join(HERE, "data")
 PARENT = os.environ.get("IQT_PLUGIN_PARENT") or os.path.join(HERE, "..")  # see test_install.py
 sys.path.insert(0, PARENT)
-sys.path.append(os.path.join(PARENT, "image_quality_toolset", "dependencies"))  # as the plugin does at startup
+# as the plugin does at startup (see dependency_checker.dependencies_dir)
+sys.path.append(os.path.join(PARENT, "image_quality_toolset", "dependencies", "cp%d%d" % sys.version_info[:2]))
 
 from qgis.core import (  # noqa: E402
     QgsApplication, QgsProcessingAlgorithm, QgsProcessingContext,

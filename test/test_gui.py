@@ -46,7 +46,7 @@ def main():
     if os.environ.get("IQT_PLUGIN_PARENT"):
         import loess
         import skimage
-        deps = os.path.join(PARENT, "image_quality_toolset", "dependencies")
+        deps = os.path.join(PARENT, "image_quality_toolset", "dependencies")  # holds one cpXY folder per Python
         for m in (loess, skimage):
             assert os.path.abspath(m.__file__).startswith(os.path.abspath(deps)), f"{m.__name__} not from the zip: {m.__file__}"
     p.unload()

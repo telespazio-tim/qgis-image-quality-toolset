@@ -23,11 +23,12 @@ jobs:
         os: [ubuntu-22.04, ubuntu-24.04, ubuntu-26.04, windows-latest, macos-14, macos-15, macos-15-intel, macos-26]  # linux / win64 / osx (arm64 + intel)
         qgis: ["3", "4"]  # one plugin zip per platform and QGIS major version
         include:
-          # runners that publish a zip (macos-14 = oldest arm64, widest wheel compatibility)
-          - {os: ubuntu-22.04, platform: linux-x64, package: true}  # oldest LTS = lowest glibc
-          - {os: windows-latest, platform: win-x64, package: true}
-          - {os: macos-14, platform: macos-arm64, package: true}
-          - {os: macos-15-intel, platform: macos-x64, package: true}
+          # runners that publish a zip (macos-14 = oldest arm64, widest wheel compatibility);
+          # tags = wheel platform tags passed to pip for the bundled dependencies
+          - {os: ubuntu-22.04, platform: linux-x64, package: true, tags: "manylinux2014_x86_64 manylinux_2_28_x86_64"}  # oldest LTS = lowest glibc
+          - {os: windows-latest, platform: win-x64, package: true, tags: "win_amd64"}
+          - {os: macos-14, platform: macos-arm64, package: true, tags: "macosx_11_0_arm64 macosx_12_0_arm64 macosx_13_0_arm64 macosx_14_0_arm64 macosx_15_0_arm64"}
+          - {os: macos-15-intel, platform: macos-x64, package: true, tags: "macosx_10_13_x86_64 macosx_10_15_x86_64 macosx_11_0_x86_64 macosx_12_0_x86_64 macosx_13_0_x86_64 macosx_14_0_x86_64 macosx_15_0_x86_64"}
     runs-on: ${{ matrix.os }}
     defaults:
       run:
@@ -57,23 +58,15 @@ jobs:
           fi
           python test/test_install.py
           python test/test_algorithms.py
-      # numpy/scipy/matplotlib (and its dependencies) come from QGIS; loess and scikit-image (compiled, so tied to
-      # platform and Python version) are bundled where the plugin looks: <plugin>/dependencies
+      # numpy/scipy/matplotlib come from QGIS; loess and scikit-image (compiled: one wheel set per Python)
+      # are bundled for every Python QGIS ships, where the plugin looks: <plugin>/dependencies/cpXY.
+      # QGIS 3 runs on Python 3.9-3.13, QGIS 4 on 3.12-3.14.
       - name: Build plugin zip
         if: matrix.package
         run: |
-          # no make/rsync on the Windows runner
-          mkdir build && cp -r image_quality_toolset build/
-          find build -name __pycache__ -prune -exec rm -rf {} +
-          D=build/image_quality_toolset/dependencies
-          pip install --target "$D" -r bundle-requirements.txt
-          (cd "$D" && rm -rf bin numpy* scipy* matplotlib* mpl_toolkits pylab.py contourpy* cycler* kiwisolver* fontTools fonttools* dateutil python_dateutil* pyparsing* six.py)
-          find build -name __pycache__ -prune -exec rm -rf {} +
-          pip freeze --path "$D" > build/image_quality_toolset/bundled-versions.txt
           V=$(grep '^version=' image_quality_toolset/metadata.txt | cut -d= -f2)
-          mkdir -p out
-          python -c "import shutil,sys; shutil.make_archive(sys.argv[1], 'zip', 'build', 'image_quality_toolset')" \
-            "out/image_quality_toolset-$V-${{ matrix.platform }}-qgis${{ matrix.qgis }}"
+          python tools/build_zip.py "out/image_quality_toolset-$V-${{ matrix.platform }}-qgis${{ matrix.qgis }}.zip" \
+            "${{ matrix.qgis == '3' && '3.9,3.10,3.11,3.12,3.13' || '3.12,3.13,3.14' }}" ${{ matrix.tags }}
           python test/check_zip.py out/*.zip
           cat build/image_quality_toolset/bundled-versions.txt >> "$GITHUB_STEP_SUMMARY"
       # Install from the zip as a user would: remove the dependencies from the environment so only
@@ -89,6 +82,7 @@ jobs:
             export QGIS_PREFIX_PATH="$CONDA_PREFIX\\Library"
           fi
           pip uninstall -y loess scikit-image imageio tifffile lazy_loader networkx
+          python test/check_bundle_imports.py out/*.zip
           if python -c "import loess" 2>/dev/null; then echo "loess still in the environment" >&2; exit 1; fi
           mkdir unzipped
           python -c "import glob,zipfile; zipfile.ZipFile(glob.glob('out/*.zip')[0]).extractall('unzipped')"
@@ -101,6 +95,36 @@ jobs:
         with:
           name: plugin-${{ matrix.platform }}-qgis${{ matrix.qgis }}
           path: out/*.zip
+
+  # Every bundled wheel set imports under its Python on the real OS (no QGIS: numpy and scipy from PyPI).
+  bundle-compat:
+    name: bundle-compat (${{ matrix.platform }}, python ${{ matrix.python }})
+    needs: install
+    if: ${{ !cancelled() }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-22.04, windows-latest, macos-14, macos-15-intel]
+        python: ["3.9", "3.10", "3.11", "3.12", "3.13", "3.14"]
+        include:
+          - {os: ubuntu-22.04, platform: linux-x64}
+          - {os: windows-latest, platform: win-x64}
+          - {os: macos-14, platform: macos-arm64}
+          - {os: macos-15-intel, platform: macos-x64}
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: plugin-${{ matrix.platform }}-qgis*
+          path: zips
+          merge-multiple: true
+      - run: python -m pip install numpy scipy
+      - run: python test/check_bundle_imports.py zips/*.zip
+        shell: bash
 
   # Official QGIS .dmg (the bundle end users install), as opposed to conda-forge above.
   # The bundle needs a recent macOS, so failures on macos-14 are expected to show the

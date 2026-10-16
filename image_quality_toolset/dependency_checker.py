@@ -21,6 +21,11 @@ import subprocess
 import sys
 from typing import Dict, List, Optional, Tuple, Callable, Any
 
+
+def dependencies_dir(plugin_dir: str) -> str:
+    """Folder of the bundled/installed dependencies for the running Python (compiled wheels are per Python)."""
+    return os.path.join(plugin_dir, "dependencies", f"cp{sys.version_info.major}{sys.version_info.minor}")
+
 try:
     from importlib import metadata
 except ImportError:
@@ -412,13 +417,12 @@ if HAS_QT:
                 self.signals.progress_message.emit("Checking dependencies...")
 
                 # Add dependencies folder to sys.path
-                dependencies_dir = os.path.join(self.plugin_dir, "dependencies")
-                if not os.path.exists(dependencies_dir):
-                    os.makedirs(dependencies_dir, exist_ok=True)
+                deps_dir = dependencies_dir(self.plugin_dir)
+                os.makedirs(deps_dir, exist_ok=True)
 
-                if dependencies_dir not in sys.path:
-                    sys.path.insert(0, dependencies_dir)
-                    logger.info(f"Added dependencies to path: {dependencies_dir}")
+                if deps_dir not in sys.path:
+                    sys.path.insert(0, deps_dir)
+                    logger.info(f"Added dependencies to path: {deps_dir}")
 
                 # Progress callback
                 def on_progress(message: str):
@@ -582,7 +586,7 @@ def check_and_install_dependencies(
     logger.info("=" * 60)
     logger.info("Starting dependency check")
 
-    target_dir = os.path.join(plugin_dir, "dependencies")
+    target_dir = dependencies_dir(plugin_dir)
     os.makedirs(target_dir, exist_ok=True)
 
     if target_dir not in sys.path:
