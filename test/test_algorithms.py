@@ -36,6 +36,12 @@ CASES = {
         "target1/T32TNR_20250619T101559_B04_10m_mtf_roi.tiff", "target1/shapefile/mtf_al_bagnolo.shp",
         dict(SCALE=0.01, OFFSET=0, PX_MARGIN=0, EDGE_DIRECTION=0, ESF_MODEL=5, SAMPLING=0.2),
         {"MTF_NYQ": 0.118, "MTF50": 0.174}),
+    # synthetic 6 px bridge, Gaussian PSF sigma=0.6 px: true MTF@Nyquist=0.169, MTF50=0.312
+    # (see data/bridge/make_synthetic_bridge.py); the bridge method uses scikit-image
+    "bridge_synthetic": ("MTFEstimatorBridge",
+        "bridge/simu_6px.tiff", "bridge/shapefile/roi.shp",
+        dict(SCALE=0.01, OFFSET=0, PX_MARGIN=0, BRIDGE_WIDTH=6.0, EDGE_DIRECTION=0, SAMPLING=0.1),
+        {"MTF_NYQ": 0.169, "MTF50": 0.312}),
     "snr_target4": ("SNREstimator",
         "target4/LC09_L1TP_181040_20211121_20230505_02_T1_B5_rad_crop_2.tif", "target4/shapefile/ROI.shp",
         dict(WINDOW_SIZE=5, SNR_PRECISION=0.1, L_MIN=100, L_MAX=160),
