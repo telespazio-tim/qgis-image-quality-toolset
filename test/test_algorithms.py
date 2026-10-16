@@ -64,22 +64,6 @@ class ResultSink(QObject):
         return super().event(e)
 
 
-def pip_command_never_runs_qgis():
-    """On macOS sys.executable is the QGIS binary: pip must never be launched through it."""
-    from image_quality_toolset.dependency_checker import DependencyChecker
-    real = (sys.executable, sys.exec_prefix, sys.prefix)
-    try:
-        sys.executable = "/Applications/QGIS.app/Contents/MacOS/QGIS"
-        sys.exec_prefix = sys.prefix = os.path.join(tempfile.gettempdir(), "no_such_prefix")
-        try:
-            cmd = DependencyChecker([])._get_pip_command()
-        except RuntimeError:
-            return
-        assert os.path.basename(cmd[0]).startswith("python"), f"pip would run via {cmd[0]}"
-    finally:
-        sys.executable, sys.exec_prefix, sys.prefix = real
-
-
 def run(alg, params):
     context, feedback = QgsProcessingContext(), QgsProcessingFeedback()
     context.setProject(QgsProject.instance())
@@ -93,7 +77,6 @@ def main():
     try:
         # the "processing" plugin is not on sys.path outside a running QGIS
         sys.path.append(os.path.join(QgsApplication.pkgDataPath(), "python", "plugins"))
-        pip_command_never_runs_qgis()
         # the bridge method's compiled dependency (no bridge sample data, so import it here)
         from skimage.filters import threshold_otsu  # noqa: F401
         from skimage.morphology import binary_opening, disk, skeletonize  # noqa: F401

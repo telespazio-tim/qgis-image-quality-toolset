@@ -1,8 +1,8 @@
 """Startup test: load the plugin like QGIS does (initGui, dock, background dependency check).
 
 Run headless: QT_QPA_PLATFORM=offscreen python test/test_gui.py
-With IQT_PLUGIN_PARENT pointing at an unzipped release zip and no pip index (PIP_NO_INDEX=1),
-the dependencies must come from the zip's dependencies/ folder or the test fails.
+With IQT_PLUGIN_PARENT pointing at an unzipped release zip (and IQT_PACK_BASE_URL at the packs),
+the dependencies must come from the zip's dependency bundle or the test fails.
 """
 import os
 import sys

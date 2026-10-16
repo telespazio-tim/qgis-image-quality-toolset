@@ -126,7 +126,6 @@ jobs:
       - name: Test the plugin zip
         env:
           QT_QPA_PLATFORM: offscreen
-          PIP_NO_INDEX: "1"
           IQT_PACK_BASE_URL: http://127.0.0.1:18431
         run: |
           if [ "$RUNNER_OS" = Windows ]; then
@@ -247,7 +246,6 @@ jobs:
           path: packs
       - name: Test the plugin zip with the bundle Python
         env:
-          PIP_NO_INDEX: "1"
           IQT_PACK_BASE_URL: http://127.0.0.1:18431
         run: |
           export PYTHONPATH="$APP/Contents/Resources/qgis/python/plugins:$APP/Contents/Resources/python/plugins"
@@ -277,7 +275,6 @@ jobs:
         channel: [ltr, latest]   # https://qgis.org/ubuntu-ltr and https://qgis.org/ubuntu
     env:
       QT_QPA_PLATFORM: offscreen
-      PIP_NO_INDEX: "1"
       IQT_PACK_BASE_URL: http://127.0.0.1:18431
     steps:
       - uses: actions/checkout@v4

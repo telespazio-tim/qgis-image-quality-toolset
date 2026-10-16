@@ -163,6 +163,7 @@ class PlotWindow(QgsDockWidget):
         self.progress_label = QLabel("Checking dependencies...")
         self.progress_label.setStyleSheet("font-size: 10px; color: #666;")
         self.progress_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.progress_label.setWordWrap(True)
         progress_layout.addWidget(self.progress_label)
 
         # Error button (hidden by default)
@@ -188,7 +189,7 @@ class PlotWindow(QgsDockWidget):
     def _show_error_log(self):
         """Show the full dependency check/install log."""
         dialog = QDialog(self)
-        dialog.setWindowTitle("Dependency Check/Installation Log")
+        dialog.setWindowTitle("Dependency bundle log")
         dialog.setMinimumSize(600, 500)
 
         layout = QVBoxLayout()
@@ -226,8 +227,12 @@ class PlotWindow(QgsDockWidget):
                 if hasattr(self, "progress_bar"):
                     self.progress_bar.hide()
             else:
-                self.progress_label.setStyleSheet("font-size: 10px; color: #666;")
+                done = message.startswith("✓")
+                self.progress_label.setStyleSheet(
+                    "font-size: 10px; color: #2e7d32;" if done else "font-size: 10px; color: #666;")
                 self.error_button.hide()
+                if done and hasattr(self, "progress_bar"):
+                    self.progress_bar.hide()
 
     def set_error_message(self, message: str):
         """Store the last error message for display."""
