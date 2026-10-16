@@ -1,8 +1,7 @@
-"""Check the bundled wheels import under the running Python (no QGIS needed; numpy, scipy installed).
+"""Check the wheel packs import under the running Python (no QGIS needed; numpy, scipy installed).
 
-Run: python test/check_bundle_imports.py out/*.zip
-For each zip that has a dependencies/cpXY folder for this Python, extract that folder and import
-what the plugin uses. Zips without a folder for this Python are skipped; at least one must be tested.
+Run: python test/check_bundle_imports.py packs/deps-*.zip
+Packs for other Pythons are skipped; at least one pack must match the running Python.
 """
 import subprocess
 import sys
@@ -15,22 +14,18 @@ CODE = ("import sys; sys.path.insert(0, sys.argv[1]); import loess.loess_1d, ski
         "print(skimage.__version__, skimage.__file__)")
 
 
-def main(zips):
+def main(packs):
     tested = 0
-    for path in zips:
-        z = zipfile.ZipFile(path)
-        prefix = f"image_quality_toolset/dependencies/{TAG}/"
-        members = [n for n in z.namelist() if n.startswith(prefix)]
-        if not members:
-            print(f"skip {path}: no {TAG} folder")
+    for path in packs:
+        if not path.endswith(f"-{TAG}.zip"):
             continue
         d = tempfile.mkdtemp()
-        z.extractall(d, members)
-        r = subprocess.run([sys.executable, "-c", CODE, d + "/" + prefix], capture_output=True, text=True)
-        assert r.returncode == 0, f"{path} ({TAG}): {r.stderr[-800:]}"
-        print(f"OK {path} ({TAG}): {r.stdout.strip()}")
+        zipfile.ZipFile(path).extractall(d)
+        r = subprocess.run([sys.executable, "-c", CODE, d], capture_output=True, text=True)
+        assert r.returncode == 0, f"{path}: {r.stderr[-800:]}"
+        print(f"OK {path}: {r.stdout.strip()}")
         tested += 1
-    assert tested, f"no zip bundles {TAG}"
+    assert tested, f"no pack for {TAG}"
 
 
 if __name__ == "__main__":

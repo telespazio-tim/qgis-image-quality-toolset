@@ -15,11 +15,85 @@ License: GPL-3.0
 import importlib
 import importlib.util
 import logging
+import hashlib
 import os
+import platform
 import re
 import subprocess
 import sys
+import tempfile
+import urllib.request
+import zipfile
 from typing import Dict, List, Optional, Tuple, Callable, Any
+
+
+# Prebuilt wheel packs (loess, scikit-image and friends) attached to the GitHub release of each version,
+# one per platform and Python: deps-<platform>-cpXY.zip. Their sha256 ships inside the plugin zip
+# (deps-sha256.txt), so a pack is only unpacked if it is the one this plugin version was released with.
+PACK_BASE_URL = "https://github.com/telespazio-tim/qgis-image-quality-toolset/releases/download/v{version}"
+
+
+def platform_id() -> str:
+    """Platform part of the wheel pack name."""
+    if sys.platform.startswith("win"):
+        return "win-x64"
+    if sys.platform == "darwin":
+        return "macos-arm64" if platform.machine().lower() in ("arm64", "aarch64") else "macos-x64"
+    return "linux-x64"  # ponytail: no linux-arm64 pack; those users get the pip fallback
+
+
+def pack_name() -> str:
+    return f"deps-{platform_id()}-cp{sys.version_info.major}{sys.version_info.minor}.zip"
+
+
+def install_wheel_pack(plugin_dir: str, progress_callback: Optional[Callable[[str], None]] = None) -> bool:
+    """
+    Download (or take from the plugin folder, for offline installs) the wheel pack matching this
+    platform and Python, check its sha256 and unpack it into dependencies_dir().
+
+    :returns: True if a pack was unpacked
+    """
+    say = progress_callback or (lambda m: None)
+    name = pack_name()
+    hashes_file = os.path.join(plugin_dir, "deps-sha256.txt")
+    if not os.path.exists(hashes_file):  # running from source: nothing was released
+        logger.info("No deps-sha256.txt: skipping the wheel pack")
+        return False
+    with open(hashes_file, encoding="utf-8") as f:
+        hashes = {line.split()[1]: line.split()[0] for line in f if len(line.split()) == 2}
+    if name not in hashes:
+        logger.info(f"No wheel pack released for {name}")
+        return False
+
+    with open(os.path.join(plugin_dir, "metadata.txt"), encoding="utf-8") as f:
+        version = next(l.split("=", 1)[1].strip() for l in f if l.startswith("version="))
+    url = os.environ.get("IQT_PACK_BASE_URL", PACK_BASE_URL.format(version=version)) + "/" + name
+
+    local = os.path.join(plugin_dir, name)  # offline install: the user drops the pack here
+    downloaded = None
+    try:
+        if not os.path.exists(local):
+            say(f"Downloading {name}...")
+            fd, downloaded = tempfile.mkstemp(suffix=".zip", dir=plugin_dir)
+            with os.fdopen(fd, "wb") as out, urllib.request.urlopen(url, timeout=60) as r:
+                out.write(r.read())
+            local = downloaded
+        with open(local, "rb") as f:
+            digest = hashlib.sha256(f.read()).hexdigest()
+        if digest != hashes[name]:
+            raise ValueError(f"checksum mismatch for {name}")
+        say(f"Installing {name}...")
+        with zipfile.ZipFile(local) as z:
+            z.extractall(dependencies_dir(plugin_dir))
+        importlib.invalidate_caches()
+        return True
+    except Exception as e:
+        logger.error(f"Wheel pack {name} not installed: {e}")
+        say(f"Could not get {name} ({e}). Offline? Download {url} and put it in {plugin_dir}, then restart QGIS.")
+        return False
+    finally:
+        if downloaded and os.path.exists(downloaded):
+            os.remove(downloaded)
 
 
 def dependencies_dir(plugin_dir: str) -> str:
@@ -604,8 +678,11 @@ def check_and_install_dependencies(
     if progress_callback:
         progress_callback(f"Found {len(missing)} missing packages...")
 
-    # Use the checker to install missing ones
-    checker.install_missing(target_dir=target_dir, progress_callback=progress_callback)
+    # Prebuilt pack first (no pip needed), pip for whatever is still missing
+    if install_wheel_pack(plugin_dir, progress_callback):
+        checker.check_all()
+    if checker.has_missing():
+        checker.install_missing(target_dir=target_dir, progress_callback=progress_callback)
 
     # Final re-check
     checker.check_all()
