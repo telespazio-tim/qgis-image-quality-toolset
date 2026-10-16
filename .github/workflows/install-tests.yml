@@ -72,6 +72,8 @@ jobs:
       matrix:
         os: [ubuntu-22.04, ubuntu-24.04, ubuntu-26.04, windows-latest, macos-14, macos-15, macos-15-intel, macos-26]  # linux / win64 / osx (arm64 + intel)
         qgis: ["3", "4"]
+        exclude:
+          - {os: macos-15-intel, qgis: "4"}  # failing after 46 min, not generated
         include:  # which wheel packs each runner tests
           - {os: ubuntu-22.04, platform: linux-x64}
           - {os: ubuntu-24.04, platform: linux-x64}
