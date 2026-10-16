@@ -7,6 +7,14 @@ on:
     branches: [develop]
 
 jobs:
+  # Fast checks that need no QGIS: Qt6-incompatible enums, and the layout/metadata of the zip.
+  lint:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - run: python3 test/check_qt6_enums.py
+      - run: make build && python3 test/check_zip.py dist/*.zip
+
   install:
     name: install (${{ matrix.os }}, qgis${{ matrix.qgis }})
     strategy:
@@ -58,12 +66,16 @@ jobs:
           mkdir build && cp -r image_quality_toolset build/
           find build -name __pycache__ -prune -exec rm -rf {} +
           D=build/image_quality_toolset/dependencies
-          pip install --target "$D" loess==2.1.2 scikit-image
+          pip install --target "$D" -r bundle-requirements.txt
           (cd "$D" && rm -rf bin numpy* scipy* matplotlib* mpl_toolkits pylab.py contourpy* cycler* kiwisolver* fontTools fonttools* dateutil python_dateutil* pyparsing* six.py)
+          find build -name __pycache__ -prune -exec rm -rf {} +
+          pip freeze --path "$D" > build/image_quality_toolset/bundled-versions.txt
           V=$(grep '^version=' image_quality_toolset/metadata.txt | cut -d= -f2)
           mkdir -p out
           python -c "import shutil,sys; shutil.make_archive(sys.argv[1], 'zip', 'build', 'image_quality_toolset')" \
             "out/image_quality_toolset-$V-${{ matrix.platform }}-qgis${{ matrix.qgis }}"
+          python test/check_zip.py out/*.zip
+          cat build/image_quality_toolset/bundled-versions.txt >> "$GITHUB_STEP_SUMMARY"
       # Install from the zip as a user would: remove the dependencies from the environment so only
       # the zip can provide them, forbid pip downloads, then start the plugin and run the algorithms.
       - name: Test the plugin zip
@@ -95,6 +107,8 @@ jobs:
   # "built for Mac OS X 15.0" libc++ error. Not blocking: bundle paths may need tuning.
   dmg:
     name: dmg (${{ matrix.os }}, ${{ matrix.qgis }} ${{ matrix.channel }})
+    needs: install   # tests the macos-arm64 zip built there
+    if: ${{ !cancelled() }}
     continue-on-error: true
     strategy:
       fail-fast: false
@@ -151,6 +165,73 @@ jobs:
           export QGIS_PREFIX_PATH="$APP"
           "$PY" test/test_install.py
           "$PY" test/test_algorithms.py
+      # the zip users download: dependencies must come from it (no $RUNNER_TEMP/extra, no pip index)
+      - name: Detect QGIS major version
+        id: v
+        run: echo "major=$(defaults read "$APP/Contents/Info" CFBundleShortVersionString | cut -d. -f1)" >> "$GITHUB_OUTPUT"
+      - uses: actions/download-artifact@v4
+        with:
+          name: plugin-macos-arm64-qgis${{ steps.v.outputs.major }}
+          path: zipdl
+      - name: Test the plugin zip with the bundle Python
+        env:
+          PIP_NO_INDEX: "1"
+        run: |
+          export PYTHONPATH="$APP/Contents/Resources/qgis/python/plugins:$APP/Contents/Resources/python/plugins"
+          export QGIS_PREFIX_PATH="$APP"
+          mkdir unzipped
+          "$PY" -c "import glob,zipfile; zipfile.ZipFile(glob.glob('zipdl/*.zip')[0]).extractall('unzipped')"
+          export IQT_PLUGIN_PARENT="$PWD/unzipped"
+          "$PY" test/test_install.py
+          "$PY" test/test_gui.py
+          "$PY" test/test_algorithms.py
+
+  # Distribution QGIS from the qgis.org apt repository with the system Python and no pip:
+  # what most Linux users have. Tests the linux-x64 zip built in the install job.
+  # Not blocking until it has passed once.
+  apt:
+    name: apt (${{ matrix.channel }})
+    needs: install
+    if: ${{ !cancelled() }}
+    continue-on-error: true
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        channel: [ltr, latest]   # https://qgis.org/ubuntu-ltr and https://qgis.org/ubuntu
+    env:
+      QT_QPA_PLATFORM: offscreen
+      PIP_NO_INDEX: "1"
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install QGIS from apt
+        run: |
+          [ "${{ matrix.channel }}" = ltr ] && REPO=ubuntu-ltr || REPO=ubuntu
+          sudo mkdir -m755 -p /etc/apt/keyrings
+          sudo wget -qO /etc/apt/keyrings/qgis-archive-keyring.gpg https://download.qgis.org/downloads/qgis-archive-keyring.gpg
+          printf 'Types: deb\nURIs: https://qgis.org/%s\nSuites: noble\nArchitectures: amd64\nComponents: main\nSigned-By: /etc/apt/keyrings/qgis-archive-keyring.gpg\n' "$REPO" \
+            | sudo tee /etc/apt/sources.list.d/qgis.sources
+          sudo apt-get update
+          sudo apt-get install -y qgis python3-qgis python3-numpy python3-scipy python3-matplotlib
+      - name: QGIS version
+        id: v
+        run: |
+          export PYTHONPATH=/usr/share/qgis/python
+          /usr/bin/python3 -c "from qgis.core import Qgis; print(Qgis.version())" | tee -a "$GITHUB_STEP_SUMMARY"
+          echo "major=$(/usr/bin/python3 -c 'from qgis.core import Qgis; print(Qgis.versionInt() // 10000)')" >> "$GITHUB_OUTPUT"
+      - uses: actions/download-artifact@v4
+        with:
+          name: plugin-linux-x64-qgis${{ steps.v.outputs.major }}
+          path: zipdl
+      - name: Test the plugin zip with the system Python
+        run: |
+          export PYTHONPATH=/usr/share/qgis/python
+          mkdir unzipped
+          /usr/bin/python3 -c "import glob,zipfile; zipfile.ZipFile(glob.glob('zipdl/*.zip')[0]).extractall('unzipped')"
+          export IQT_PLUGIN_PARENT="$PWD/unzipped"
+          /usr/bin/python3 test/test_install.py
+          /usr/bin/python3 test/test_gui.py
+          /usr/bin/python3 test/test_algorithms.py
 
   # Dependency-free zip (the plugin installs its dependencies itself at first run).
   package:

@@ -1,0 +1,5 @@
+# Dependencies bundled in the release zips (numpy/scipy/matplotlib come from QGIS).
+# Bounded, not exact: scikit-image releases drop old Pythons, and the zips are built for
+# several Python versions. The versions actually bundled are written to bundled-versions.txt in each zip.
+loess==2.1.2
+scikit-image>=0.22,<0.27

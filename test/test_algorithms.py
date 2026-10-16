@@ -23,20 +23,23 @@ from qgis.core import (  # noqa: E402
     QgsProcessingFeedback, QgsProject, QgsRasterLayer, QgsVectorLayer)
 from qgis.PyQt.QtCore import QObject  # noqa: E402
 
-# name: (algorithm name, raster, roi, extra parameters, expected result keys)
+# name: (algorithm name, raster, roi, extra parameters, expected results)
+# Reference values come from a known good run; REL_TOL absorbs numpy/scipy/BLAS differences across
+# platforms. If a dependency upgrade legitimately moves them, check the change, then update here.
+REL_TOL = 0.05
 CASES = {
     "knife_edge_target1": ("MTFEstimatorKnifeEdge",
         "target1/T32TNR_20250619T101559_B04_10m_mtf_roi.tiff", "target1/shapefile/mtf_al_bagnolo.shp",
         dict(SCALE=0.01, OFFSET=0, PX_MARGIN=0, EDGE_DIRECTION=0, ESF_MODEL=0, SAMPLING=0.2),
-        ["MTF_NYQ", "MTF50"]),
+        {"MTF_NYQ": 0.022, "MTF50": 0.172}),
     "knife_edge_loess": ("MTFEstimatorKnifeEdge",  # needs the bundled loess
         "target1/T32TNR_20250619T101559_B04_10m_mtf_roi.tiff", "target1/shapefile/mtf_al_bagnolo.shp",
         dict(SCALE=0.01, OFFSET=0, PX_MARGIN=0, EDGE_DIRECTION=0, ESF_MODEL=5, SAMPLING=0.2),
-        ["MTF_NYQ", "MTF50"]),
+        {"MTF_NYQ": 0.118, "MTF50": 0.174}),
     "snr_target4": ("SNREstimator",
         "target4/LC09_L1TP_181040_20211121_20230505_02_T1_B5_rad_crop_2.tif", "target4/shapefile/ROI.shp",
         dict(WINDOW_SIZE=5, SNR_PRECISION=0.1, L_MIN=100, L_MAX=160),
-        ["peak_snr_value", "snr_formulation_1"]),  # SNR exposes attributes, not .results
+        {"peak_snr_value": 25.204, "snr_formulation_1": 30.180}),  # SNR exposes attributes, not .results
 }
 
 
@@ -111,9 +114,10 @@ def main():
             assert widget.events, f"{name}: no result posted to the dock"
             mtf = widget.events.pop().getMTF()
             results = getattr(mtf, "results", None) or vars(mtf)
-            for key in keys:
+            for key, expected in keys.items():
                 val = results.get(key)
                 assert val is not None and math.isfinite(float(val)), f"{name}: {key}={val}"
+                assert math.isclose(float(val), expected, rel_tol=REL_TOL), f"{name}: {key}={float(val):.4f}, expected {expected}"
             if alg_name != "SNREstimator":  # the SNR algorithm writes no report
                 assert os.path.exists(os.path.join(out, "report.gpkg")), f"{name}: no report written"
             print(f"OK: {name} " + ", ".join(f"{k}={float(results[k]):.3f}" for k in keys))
