@@ -730,7 +730,7 @@ def fLOESS(noisy, span):
         YY = np.array(
             [[np.nansum(w_ * y_ * (x_ ** 0))], [np.nansum(w_ * y_ * (x_ ** 1))], [np.nansum(w_ * y_ * (x_ ** 2))]])
 
-        CC = linalg.solve(XX, YY)
+        CC = linalg.solve(XX, YY).ravel()
 
         smoothed[i] = CC[0] + CC[1] * x[i] + CC[2] * x[i] ** 2
 

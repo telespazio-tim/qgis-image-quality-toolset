@@ -562,7 +562,7 @@ def fLOESS(noisy, span):
             ]
         )
         warnings.filterwarnings("ignore")
-        CC = linalg.solve(XX, YY)
+        CC = linalg.solve(XX, YY).ravel()
 
         smoothed[i] = CC[0] + CC[1] * x[i] + CC[2] * x[i] ** 2
 
