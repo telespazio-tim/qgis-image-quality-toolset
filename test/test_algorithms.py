@@ -37,8 +37,8 @@ CASES = {
         "target1/T32TNR_20250619T101559_B04_10m_mtf_roi.tiff", "target1/shapefile/mtf_al_bagnolo.shp",
         dict(SCALE=0.01, OFFSET=0, PX_MARGIN=0, EDGE_DIRECTION=0, ESF_MODEL=5, SAMPLING=0.2),
         {"MTF_NYQ": 0.118, "MTF50": 0.174}),
-    # 6 px bridge simulation (50x50, georeferenced afterwards with the same CRS/origin as
-    # make_synthetic_bridge.py): the true MTF is unknown, values come from a known good run;
+    # 6 px bridge simulation (50x50, georeferenced afterwards, EPSG:32632, 1 m pixels):
+    # the true MTF is unknown, values come from a known good run;
     # the bridge method uses scikit-image
     "bridge_synthetic": ("MTFEstimatorBridge",
         "bridge/simu_6px.tiff", "bridge/shapefile/roi.shp",
