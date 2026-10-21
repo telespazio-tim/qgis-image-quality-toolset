@@ -45,6 +45,7 @@ def plugin(out_zip, packs_dir):
     shutil.rmtree(build, ignore_errors=True)
     dest = build / "image_quality_toolset"
     shutil.copytree(ROOT / "image_quality_toolset", dest, ignore=shutil.ignore_patterns("__pycache__", "*.pyc", "dependencies"))
+    shutil.copy(ROOT / "LICENSE", dest / "LICENSE")  # license_file=LICENSE in metadata.txt; plugins.qgis.org requires it
     lines = [f"{hashlib.sha256(p.read_bytes()).hexdigest()}  {p.name}" for p in sorted(pathlib.Path(packs_dir).glob("deps-*.zip"))]
     assert lines, f"no deps-*.zip in {packs_dir}"
     (dest / "deps-sha256.txt").write_text("\n".join(lines) + "\n")

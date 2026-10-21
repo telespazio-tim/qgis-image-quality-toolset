@@ -13,7 +13,7 @@ about=The Image Quality Toolset is a QGIS plugin developed in the context of the
     Each method requires an input raster and a polygon ROI (shapefile). Radiometric scale and offset parameters allow conversion from raw DN to radiance. Results are accumulated across runs in a GeoPackage report, one feature per analysis, with full metadata and geometry.
 
     The plugin uses a dual-license model: the QGIS integration layer is released under GPL v3; the core signal-processing algorithms (MTF, SNR, ESF models, variogram) are released under Apache 2.0.
-version=1.1
+version=1.2
 qgisMinimumVersion=3.38
 qgisMaximumVersion=4.99
 author=Telespazio TIM
@@ -31,6 +31,11 @@ hasProcessingProvider=yes
 experimental=False
 deprecated=False
 changelog=
+    ImageQualityToolset 1.2
+        - Fixed the Knife Edge and Bridge methods failing with SCALE=1 (raw DN, the default): the ESF outlier cleaning now uses a threshold relative to the ESF range, so results no longer depend on the scale.
+        - Fixed the Bridge method failing when the ROI polygon does not fill its bounding box (NaN pixels), and an input rotation angle of 0 being ignored.
+        - A ROI with no CRS is accepted (its coordinates are taken in the raster CRS): a raw, non-georeferenced image and its ROI overlap in QGIS without choosing a CRS.
+        - Fixed the results panel error "wrapped C/C++ object of type QgsVectorLayer has been deleted" when the ROI is given as a file.
     ImageQualityToolset 1.1
         - QGIS 4 / Qt 6 support (also QGIS 3.38+).
         - Dependencies (loess, scikit-image) now come from a prebuilt bundle downloaded at first run and checked against a checksum, instead of pip. Status and errors are shown in the results panel; offline install is possible by dropping the bundle in the plugin folder.
