@@ -460,6 +460,19 @@ def ahamming(n, mid):
     return data
 
 
+CLEAN_MAX_JUMP = 0.5  # largest bin-to-bin ESF jump kept by clean_nuage, as a fraction of the ESF range
+
+
+def clean_threshold(R, max_jump=CLEAN_MAX_JUMP):
+    """
+    Outlier threshold of clean_nuage for the binned ESF values R: a fraction of their range, so
+    that the cleaning does not depend on the radiometric scale (an absolute threshold removed
+    the edge transition itself in DN, and nothing at all in small radiance units). Real
+    bin-to-bin steps of the test ESFs stay below 20 % of the range.
+    """
+    return max_jump * (np.nanmax(R) - np.nanmin(R))
+
+
 def clean_nuage(x1, R, R_std, N, th=500):
     """
     Clean point cloud by removing outliers.

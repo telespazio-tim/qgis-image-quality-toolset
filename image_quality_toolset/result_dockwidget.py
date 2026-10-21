@@ -245,7 +245,12 @@ class PlotWindow(QgsDockWidget):
             return super(PlotWindow, self).event(event)
 
         if self.mtf is not None:
-            self.mtf.getRoi().geometryChanged.disconnect(self.on_roi_changed)
+            try:
+                self.mtf.getRoi().geometryChanged.disconnect(self.on_roi_changed)
+            except (RuntimeError, TypeError):
+                # the previous ROI layer no longer exists: removed from the project, or a
+                # temporary layer Processing opened from a file path and deleted after the run
+                pass
 
         widget = QWidget()
 
@@ -253,7 +258,10 @@ class PlotWindow(QgsDockWidget):
         self.parameters = event.getParameters()
         self.algorithmId = event.getAlgorithmId()
 
-        self.mtf.getRoi().geometryChanged.connect(self.on_roi_changed)
+        try:  # rerun when the ROI is edited: only for a ROI layer of the project
+            self.mtf.getRoi().geometryChanged.connect(self.on_roi_changed)
+        except RuntimeError:
+            pass  # temporary ROI layer, opened from a file path, already deleted by Processing
 
         figure = self.mtf.figure()[0]
         canvas = FigureCanvas(figure)

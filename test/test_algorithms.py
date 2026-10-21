@@ -44,6 +44,22 @@ CASES = {
         "bridge/simu_6px.tiff", "bridge/shapefile/roi.shp",
         dict(SCALE=0.01, OFFSET=0, PX_MARGIN=0, BRIDGE_WIDTH=6.0, EDGE_DIRECTION=0, SAMPLING=0.1),
         {"MTF_NYQ": 0.0787, "MTF50": 0.2839}),
+    # SCALE=1 (the default, raw DN): the MTF is normalised, so the same values as above. The bin
+    # cleaning threshold used to be absolute: in DN it removed bins, which crashed both methods.
+    "knife_edge_target1_dn": ("MTFEstimatorKnifeEdge",
+        "target1/T32TNR_20250619T101559_B04_10m_mtf_roi.tiff", "target1/shapefile/mtf_al_bagnolo.shp",
+        dict(SCALE=1, OFFSET=0, PX_MARGIN=0, EDGE_DIRECTION=0, ESF_MODEL=0, SAMPLING=0.2),
+        {"MTF_NYQ": 0.022, "MTF50": 0.172}),
+    "bridge_synthetic_dn": ("MTFEstimatorBridge",
+        "bridge/simu_6px.tiff", "bridge/shapefile/roi.shp",
+        dict(SCALE=1, OFFSET=0, PX_MARGIN=0, BRIDGE_WIDTH=6.0, EDGE_DIRECTION=0, SAMPLING=0.1),
+        {"MTF_NYQ": 0.0787, "MTF50": 0.2839}),
+    # raw image (no CRS, pixel coordinates) and a ROI with no CRS either (no .prj), so that QGIS
+    # draws them on top of each other: the window of config_files/pan_target_MTF.ini
+    "knife_edge_target2_nocrs": ("MTFEstimatorKnifeEdge",
+        "target2/S100199aI_002_2_PAN_L0R_mtf_target.tif", "target2/shapefile/mtf_mire.shp",
+        dict(SCALE=0.01, OFFSET=1, PX_MARGIN=0, EDGE_DIRECTION=0, ESF_MODEL=0, SAMPLING=0.2),
+        {"MTF_NYQ": 0.011, "MTF50": 0.153}),
     "snr_target4": ("SNREstimator",
         "target4/LC09_L1TP_181040_20211121_20230505_02_T1_B5_rad_crop_2.tif", "target4/shapefile/ROI.shp",
         dict(WINDOW_SIZE=5, SNR_PRECISION=0.1, L_MIN=100, L_MAX=160),
@@ -112,9 +128,28 @@ def main():
             if alg_name != "SNREstimator":  # the SNR algorithm writes no report
                 assert os.path.exists(os.path.join(out, "report.gpkg")), f"{name}: no report written"
             print(f"OK: {name} " + ", ".join(f"{k}={float(results[k]):.3f}" for k in keys))
+        check_bridge_angle_with_nan()
     finally:
         # no app.exitQgis(): tearing down after matplotlib/GDAL use can segfault (exit code 139)
         pass
+
+
+def check_bridge_angle_with_nan():
+    """The ROI cut-out is NaN outside the polygon: the bridge angle estimation must ignore those
+    pixels (all-NaN normalisation made threshold_otsu raise "autodetected range of [nan, nan]")."""
+    import numpy as np
+    from osgeo import gdal
+    from image_quality_toolset.algorithms.mtf_estimator.mtf_bridge import estimate_angle_from_bridge
+
+    image = gdal.Open(os.path.join(DATA, "bridge", "simu_6px.tiff")).ReadAsArray().astype(float)
+    masked = image.copy()
+    rows, cols = np.indices(masked.shape)
+    corner = 15  # cut two opposite corners, as a polygon ROI does in its bounding box
+    masked[(rows + cols < corner) | (rows + cols > rows.max() + cols.max() - corner)] = np.nan
+    assert np.isnan(masked).any()
+    angle, angle_masked = estimate_angle_from_bridge(image), estimate_angle_from_bridge(masked)
+    assert math.isclose(angle, angle_masked, abs_tol=0.5), f"bridge angle {angle_masked:.2f} with NaN, {angle:.2f} without"
+    print(f"OK: bridge_angle_with_nan angle={angle_masked:.2f} ({int(np.isnan(masked).sum())} NaN pixels)")
 
 
 if __name__ == "__main__":

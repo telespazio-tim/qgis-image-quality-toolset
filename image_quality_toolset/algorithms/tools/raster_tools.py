@@ -148,7 +148,8 @@ def roi_extraction(raster_layer, band_n, vlayer, context, feedback):
             f"{raster_layer.crs().authid()} with synthesized geotransform."
         )
     vector_srs = osr.SpatialReference()
-    vector_srs.ImportFromWkt(featureSource.sourceCrs().toWkt())
+    if featureSource.sourceCrs().isValid():  # a ROI may have no CRS (no .prj), like a raw image
+        vector_srs.ImportFromWkt(featureSource.sourceCrs().toWkt())
 
     # https://gdal.org/tutorials/osr_api_tut.html#crs-and-axis-order
     if int(osgeo.__version__[0]) >= 3:
@@ -160,6 +161,9 @@ def roi_extraction(raster_layer, band_n, vlayer, context, feedback):
         coord_transform = None
         feedback.pushInfo("WARNING: Raster with no CRS")
         gt[5] = -1 * gt[5]
+    elif str(vector_srs) == "":
+        coord_transform = None
+        feedback.pushInfo("WARNING: ROI with no CRS, its coordinates are taken in the raster CRS")
     else:
         coord_transform = osr.CoordinateTransformation(vector_srs, raster_srs)
 

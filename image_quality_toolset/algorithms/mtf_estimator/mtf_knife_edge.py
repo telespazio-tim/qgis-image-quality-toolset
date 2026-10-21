@@ -40,6 +40,7 @@ from .mtf_common import (
     esf_to_eq_space,
     ahamming,
     clean_nuage,
+    clean_threshold,
     fLOESS,
     knife_edge1,
     sgolayfilt,
@@ -622,20 +623,21 @@ class MtfKnifeEdge(Mtf):  # M Sample origin for statistics
         # plt.show()
 
         # Rough cleanup of the point cloud
-        th = 50
+        th = clean_threshold(bin_means)
         self.th = th
         # xclean, Rclean, R_std_clean = clean_nuage(x1, R, R_std, N, th)
 
         self.x_old = bin_edges[:-1]
         self.R_old = bin_means
 
-        bin_edges[:-1], bin_means, bin_std, masque = clean_nuage(bin_edges[:-1],
-                                                                 bin_means,
-                                                                 bin_std,
-                                                                 bin_count,
-                                                                 th)
+        # the cleaned arrays are shorter when bins are removed: new arrays, not bin_edges[:-1]
+        x_clean, bin_means, bin_std, masque = clean_nuage(bin_edges[:-1],
+                                                          bin_means,
+                                                          bin_std,
+                                                          bin_count,
+                                                          th)
         # New variables obtained with scipy
-        self.x = bin_edges[:-1]
+        self.x = x_clean
         self.N = bin_count
         self.nuage = bin_means
         self.nuage_std = bin_std

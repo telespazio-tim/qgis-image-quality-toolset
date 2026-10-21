@@ -39,6 +39,7 @@ from .mtf_common import (
     esf_to_eq_space,
     ahamming,
     clean_nuage,
+    clean_threshold,
     fLOESS,
     knife_edge1,
     sgolayfilt,
@@ -80,13 +81,19 @@ def estimate_angle_from_bridge(
         ) from exc
 
     img = image.astype(np.float64)
-    img_range = img.max() - img.min()
+    # Pixels of the ROI bounding box outside the polygon are NaN: leave them out of the
+    # normalisation and the threshold, and out of the bridge (set to 0, the background).
+    valid = np.isfinite(img)
+    if not valid.any():
+        raise ValueError("Image has no valid pixels; cannot estimate bridge angle.")
+    img_min, img_max = img[valid].min(), img[valid].max()
+    img_range = img_max - img_min
     if img_range == 0:
         raise ValueError("Image has no contrast; cannot estimate bridge angle.")
-    img_norm = (img - img.min()) / img_range
+    img_norm = np.where(valid, (img - img_min) / img_range, 0.0)
 
-    thresh = threshold_otsu(img_norm)
-    binary = img_norm > thresh
+    thresh = threshold_otsu(img_norm[valid])
+    binary = (img_norm > thresh) & valid
 
     binary = binary_opening(binary, disk(2))
 
@@ -303,7 +310,7 @@ class MtfBridge(Mtf):
         #         "Not enough valid transects. Try a bigger polygon or select a different edge. Exiting."
         #     )
         #     return None
-        if input_angle:
+        if input_angle is not None:  # 0 is a valid angle
             self.input_angle = input_angle
         else:
             self.estimated_angle = estimate_angle_from_bridge(
@@ -489,16 +496,17 @@ class MtfBridge(Mtf):
         bin_count, bin_edges, binnumber = sp.binned_statistic(u, v, statistic='count', bins=bin)
         bin_median, bin_edges, binnumber = sp.binned_statistic(u, v, statistic='median', bins=bin)
 
-        th = 50
+        th = clean_threshold(bin_means)
         self.th = th
         self.x_old = bin_edges[:-1]
         self.R_old = bin_means
 
-        bin_edges[:-1], bin_means, bin_std, masque = clean_nuage(
+        # the cleaned arrays are shorter when bins are removed: new arrays, not bin_edges[:-1]
+        x_clean, bin_means, bin_std, masque = clean_nuage(
             bin_edges[:-1], bin_means, bin_std, bin_count, th
         )
 
-        self.x = bin_edges[:-1]
+        self.x = x_clean
         self.N = bin_count
         self.nuage = bin_means
         self.nuage_std = bin_std
