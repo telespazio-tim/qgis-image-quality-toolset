@@ -80,13 +80,19 @@ def estimate_angle_from_bridge(
         ) from exc
 
     img = image.astype(np.float64)
-    img_range = img.max() - img.min()
+    # Pixels of the ROI bounding box outside the polygon are NaN: leave them out of the
+    # normalisation and the threshold, and out of the bridge (set to 0, the background).
+    valid = np.isfinite(img)
+    if not valid.any():
+        raise ValueError("Image has no valid pixels; cannot estimate bridge angle.")
+    img_min, img_max = img[valid].min(), img[valid].max()
+    img_range = img_max - img_min
     if img_range == 0:
         raise ValueError("Image has no contrast; cannot estimate bridge angle.")
-    img_norm = (img - img.min()) / img_range
+    img_norm = np.where(valid, (img - img_min) / img_range, 0.0)
 
-    thresh = threshold_otsu(img_norm)
-    binary = img_norm > thresh
+    thresh = threshold_otsu(img_norm[valid])
+    binary = (img_norm > thresh) & valid
 
     binary = binary_opening(binary, disk(2))
 
@@ -303,7 +309,7 @@ class MtfBridge(Mtf):
         #         "Not enough valid transects. Try a bigger polygon or select a different edge. Exiting."
         #     )
         #     return None
-        if input_angle:
+        if input_angle is not None:  # 0 is a valid angle
             self.input_angle = input_angle
         else:
             self.estimated_angle = estimate_angle_from_bridge(

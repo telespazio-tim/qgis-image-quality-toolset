@@ -112,9 +112,28 @@ def main():
             if alg_name != "SNREstimator":  # the SNR algorithm writes no report
                 assert os.path.exists(os.path.join(out, "report.gpkg")), f"{name}: no report written"
             print(f"OK: {name} " + ", ".join(f"{k}={float(results[k]):.3f}" for k in keys))
+        check_bridge_angle_with_nan()
     finally:
         # no app.exitQgis(): tearing down after matplotlib/GDAL use can segfault (exit code 139)
         pass
+
+
+def check_bridge_angle_with_nan():
+    """The ROI cut-out is NaN outside the polygon: the bridge angle estimation must ignore those
+    pixels (all-NaN normalisation made threshold_otsu raise "autodetected range of [nan, nan]")."""
+    import numpy as np
+    from osgeo import gdal
+    from image_quality_toolset.algorithms.mtf_estimator.mtf_bridge import estimate_angle_from_bridge
+
+    image = gdal.Open(os.path.join(DATA, "bridge", "simu_6px.tiff")).ReadAsArray().astype(float)
+    masked = image.copy()
+    rows, cols = np.indices(masked.shape)
+    corner = 15  # cut two opposite corners, as a polygon ROI does in its bounding box
+    masked[(rows + cols < corner) | (rows + cols > rows.max() + cols.max() - corner)] = np.nan
+    assert np.isnan(masked).any()
+    angle, angle_masked = estimate_angle_from_bridge(image), estimate_angle_from_bridge(masked)
+    assert math.isclose(angle, angle_masked, abs_tol=0.5), f"bridge angle {angle_masked:.2f} with NaN, {angle:.2f} without"
+    print(f"OK: bridge_angle_with_nan angle={angle_masked:.2f} ({int(np.isnan(masked).sum())} NaN pixels)")
 
 
 if __name__ == "__main__":

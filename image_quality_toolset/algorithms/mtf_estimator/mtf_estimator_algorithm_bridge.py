@@ -125,7 +125,8 @@ class MTFEstimatorAlgorithmBridge(BaseMTFEstimatorAlgorithm):
         edge_direction_index = self.parameterAsEnum(parameters, self.EDGE_DIRECTION, context)
         edge_direction = self.EDGE_DIRECTION_VALUES[edge_direction_index]
         sampling = self.parameterAsDouble(parameters, self.SAMPLING, context)
-        input_angle = self.parameterAsDouble(parameters, self.INPUT_ROTATION, context)
+        # optional: None when left empty (parameterAsDouble would return 0, a valid angle)
+        input_angle = self.parameterAsDouble(parameters, self.INPUT_ROTATION, context) if parameters.get(self.INPUT_ROTATION) is not None else None
         raster_layer = self.parameterAsRasterLayer(parameters, self.RASTER, context)
         band_n = self.parameterAsInt(parameters, self.BAND, context)
         vlayer = self.parameterAsVectorLayer(parameters, self.ROI, context)
