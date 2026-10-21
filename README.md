@@ -618,12 +618,33 @@ All remaining Python files, including the plugin entry point, QGIS algorithm wra
 
 ## 11. Roadmap
 
-The final version of the plugin will include:
+### Available
 
-1. **MTF computation from a knife edge ROI** — MTF Knife Edge Method (implemented).
-2. **MTF computation from a pulse ROI** — MTF Pulse Method (implemented).
-3. **SNR computation** — SNR Method (implemented).
-4. **Automatic installation** via QGIS Plugin Manager (planned).
+| Feature | Status |
+|---|---|
+| **MTF computation from a knife edge ROI** — Knife Edge Method | Available (QGIS and command line) |
+| **MTF computation from a pulse ROI** — Bridge (Pulse) Method | Available (QGIS and command line) |
+| **SNR computation** — Variogram Method | Available (QGIS and command line) |
+| **Automatic installation** — plugin ZIP from the GitHub releases; dependencies downloaded, checked (SHA-256) and installed at first start | Available since 1.1 |
+| **QGIS 4 / Qt 6** support (QGIS 3.38 or later required) | Available since 1.1 |
+| **Automated tests** of every release on Windows, Linux and macOS, with QGIS 3 and QGIS 4 | Available since 1.1 |
+
+### In progress
+
+- **Installation from the official QGIS plugin repository** (plugins.qgis.org): version 1.0 is published; version 1.2 is awaiting approval by the QGIS team.
+
+### Known limitations
+
+- No dependency bundle for **Linux on ARM** (aarch64) yet: on that platform, install `loess` and `scikit-image` by hand (see 3.3, step 4).
+- **QGIS 4 on Intel Macs** is not covered by the automated tests.
+
+### Version history
+
+| Version | Main changes |
+|---|---|
+| 1.2 | Knife Edge and Bridge methods fixed with `SCALE = 1` (raw DN); Bridge method fixed with non-rectangular ROIs; ROIs with no CRS accepted for raw images; results panel fix when the ROI is given as a file |
+| 1.1 | QGIS 4 / Qt 6 support; dependencies from a checked bundle instead of `pip`; fixes for recent NumPy versions and for macOS |
+| 1.0 | Initial release: Knife Edge, Bridge and SNR methods, GeoPackage report, command-line interface |
 
 ---
 
