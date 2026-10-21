@@ -130,7 +130,7 @@ As reporting, beside a GeoPackage file, a panel figure is generated displaying:
 
 - QGIS **3.38 or later**, including QGIS 4.
 - Windows (x64), Linux (x64) or macOS (Apple Silicon or Intel, macOS 11 or later).
-- Nothing else: the Python dependencies of the plugin are installed automatically (see 3.2.3).
+- Nothing else: the Python dependencies of the plugin are installed automatically.
 
 ### 3.2 QGIS Plugin — Automatic Installation
 
@@ -143,7 +143,7 @@ The plugin and its dependencies install without any command line, `pip` or Pytho
    > **Warning:** do not use the **Source code (zip)** archive that GitHub adds to every release: it contains the whole repository, not the plugin, and QGIS fails to load it (`No module named 'qgis-image-quality-toolset-…'`).
 
 2. In QGIS, go to **Plugins → Manage and Install Plugins… → Install from ZIP**, select the downloaded file and click **Install Plugin**.
-3. At first start, the plugin installs its dependencies (see 3.2.3); progress is shown in the results panel on the right.
+3. At first start, the plugin downloads and installs its dependencies; progress is shown in the results panel on the right.
 4. Open the **Processing Toolbox** (**Processing → Toolbox**, or `Ctrl+Alt+T`) and type **`MTF`** in its search bar: the algorithms appear under **ImageQualityToolset** (Knife Edge, Bridge and SNR methods).
 
 #### 3.2.2 From the official QGIS plugin repository
@@ -156,60 +156,70 @@ The plugin is published on [plugins.qgis.org](https://plugins.qgis.org/plugins/i
 
 Installed copies are then updated from **Plugins → Manage and Install Plugins… → Upgradeable**.
 
-#### 3.2.3 Dependencies (automatic)
+### 3.3 QGIS Plugin — Manual Installation (development only)
 
-The plugin needs `loess` and `scikit-image` on top of the libraries shipped with QGIS (NumPy, SciPy, Matplotlib, GDAL). At first start it:
+> **Note:** this method is meant for **developers** who want to run or modify the plugin from its source code. To simply use the plugin, install it automatically (see 3.2).
 
-1. downloads the dependency bundle matching your system and the Python of QGIS, `deps-<platform>-cpXY.zip` (for example `deps-win-x64-cp312.zip`), from the GitHub release of the same version;
-2. checks it against the SHA-256 listed in the plugin (`deps-sha256.txt`);
-3. unpacks it into the `dependencies` folder of the plugin. Nothing is installed into the Python of QGIS itself.
+A plugin installed from the source code does not install its dependencies automatically: this only works with the released plugin ZIP, which lists the dependency bundles (`deps-sha256.txt`). The steps below therefore include installing them by hand.
 
-**Offline installation:** download the matching `deps-<platform>-cpXY.zip` from the same release page and copy it into the plugin folder (see 3.3 for its location on your system) before starting QGIS; the plugin then uses it instead of downloading it. The Python version of QGIS is shown in **Help → About**.
+#### 1. Get the source code
 
-### 3.3 QGIS Plugin — Manual Installation
+Clone the [GitHub repository](https://github.com/telespazio-tim/qgis-image-quality-toolset):
 
-First, retrieve the code.
-
-If you have Git access, clone the repository:
 ```bash
-git clone https://gitlab2.telespazio.fr/isl/tim/edap/image-quality-tool
-cd image-quality-tool
+git clone https://github.com/telespazio-tim/qgis-image-quality-toolset.git
+cd qgis-image-quality-toolset
 ```
 
-Otherwise, download the main branch (stable) or develop branch (unstable) as zip files. It is strongly suggested to start with the main branch.
+or download it as a ZIP from GitHub (**Code → Download ZIP**). The `main` branch holds the released versions, `develop` the work in progress: start with `main`.
 
-On Linux, and with ```make``` installed, you can run:
+The plugin itself is the `image_quality_toolset` folder at the root of the repository.
 
-```
-make install
-```
-To install the plugin to the default QGIS plugin folder.
+#### 2. Find your QGIS plugins folder
 
-Alternatively, copy the `image_quality_toolset` directory into your machine's QGIS user plugins directory:
+In QGIS, go to **Settings → User Profiles → Open Active Profile Folder**, then open `python/plugins` (create it if it does not exist). This gives the right folder whatever your system, QGIS version and profile, for example on Windows:
 
-> **Warning:** `image_quality_toolset` is inside directory `image_quality_tool`.
-
-**On Windows:**
 ```
 C:\Users\<username>\AppData\Roaming\QGIS\QGIS3\profiles\default\python\plugins
 ```
-(Replace `<username>` with your username, and `default` with your profile name if it's different.)
 
-**On Linux:**
-```
-$HOME/.local/share/QGIS/QGIS3/profiles/default/python/plugins/
-```
-(Replace `default` with your profile name if it's different.)
+#### 3. Install the plugin into that folder
 
-To find out your profile name in QGIS, go to **Preferences > User Profiles** to see which one is selected.
+- **Copy** the `image_quality_toolset` folder into the plugins folder; or
+- **Link** it, so that changes to the source code are used directly (recommended for development):
+
+  ```bash
+  # Linux / macOS
+  ln -s "$PWD/image_quality_toolset" "<plugins folder>/image_quality_toolset"
+  ```
+  ```
+  :: Windows (Command Prompt as administrator, or with Developer Mode enabled)
+  mklink /D "<plugins folder>\image_quality_toolset" "<repository>\image_quality_toolset"
+  ```
+
+- On Linux, `make install` builds the plugin ZIP and unpacks it into the plugins folder of the **default** profile (`~/.local/share/QGIS/QGIS3/profiles/default/python/plugins`). This is a copy: run it again after each change.
+
+#### 4. Install the dependencies in the Python of QGIS
+
+The plugin needs `loess` and `scikit-image` in addition to the libraries shipped with QGIS. Install them with the Python of QGIS:
+
+- **Windows:** open the **OSGeo4W Shell** installed with QGIS and run
+  `python -m pip install loess==2.1.2 scikit-image`
+- **macOS:** with the Python inside the QGIS application, `Contents/MacOS/python` in recent versions (`Contents/MacOS/bin/python3` in older ones); adapt the application name (`QGIS.app`, `QGIS-LTR.app`…):
+  `/Applications/QGIS.app/Contents/MacOS/python -m pip install loess==2.1.2 scikit-image`
+- **Linux:** `python3 -m pip install --user loess==2.1.2 scikit-image`
+
+#### 5. Enable the plugin
 
 ![Plugin in Installed Plugins](image_quality_toolset/documents/manual_Installation_img_1.png)
 
-Then, after opening QGIS, in **Plugins > Manage and Install Plugins > Installed**, the plugin **ImageQualityToolset** should appear. Check the box to enable it.
+Restart QGIS, then in **Plugins → Manage and Install Plugins… → Installed**, check **ImageQualityToolset** to enable it.
 
 ![Plugin Available in QGIS](image_quality_toolset/documents/manual_Installation_img_2.png)
 
-The plugin should now be available. To access it, select **Processing > Toolbox** and expand **ImageQualityToolset**.
+The algorithms are in the **Processing Toolbox** (**Processing → Toolbox**, or `Ctrl+Alt+T`): type **`MTF`** in its search bar, or expand **ImageQualityToolset**. If the dependencies are missing, the results panel on the right says which ones.
+
+To reload the plugin after changing the code without restarting QGIS, install the **Plugin Reloader** plugin from the QGIS plugin repository.
 
 ### 3.4 Development Environment Setup
 
