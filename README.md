@@ -7,11 +7,11 @@
 > Saunier Sébastien¹, Romain Degoul¹, Charlotte Broussou¹, Leonardo De Laurentiis²
 > ¹ Telespazio France · ² ESA/ESRIN, Italy
 
-A fundamental function of an optical remote sensing sensor relies on its ability to discern ground objects in agreement with Earth Observation mission design specifications. In the community, this notion is addressed by using spatial resolution analysis technics.
+A fundamental function of an optical remote sensing sensor relies on its ability to discern ground objects in agreement with Earth Observation mission design specifications. In the community, this notion is addressed by using spatial resolution analysis techniques.
 
 From user perspective, analysis requires a good knowledge of Level 1 data quality metrics.
 
-Taken benefits of knowledge and experience learnt with Image Quality analysis undertook within the framework of the EDAP / EDAP+ project [[1]](#ref-1), best practice documents [[2]](#ref-2), [[3]](#ref-3), [[4]](#ref-4), and also inter comparison exercise activities made with CEOS members [[5]](#ref-5), the idea of developing an open-source tool dedicated to image quality analysis merged.
+Building on the knowledge and experience gained in Image Quality analysis within the framework of the EDAP / EDAP+ project [[1]](#ref-1), best practice documents [[2]](#ref-2), [[3]](#ref-3), [[4]](#ref-4), and also inter comparison exercise activities made with CEOS members [[5]](#ref-5), the idea of developing an open-source tool dedicated to image quality analysis emerged.
 
 A key advantage of this product is its operational flexibility, as it can be used either through the graphical interface of Quantum Geographic Information System (QGIS) or via a command-line interface. It has been developed for remote sensing Calibration / Validation users as a supporting tool for Quality Control (QC) of satellite image.
 
@@ -29,8 +29,8 @@ It provides a QGIS plugin and a command-line interface to perform image quality 
 
 Three methods are available:
 - **MTF Knife Edge Method**
-- **MTF Pulse Method**
-- **SNR Method**
+- **MTF Bridge (Pulse) Method**
+- **SNR Variogram Method**
 
 Both usage modes share the same underlying algorithms:
 
@@ -39,7 +39,7 @@ Both usage modes share the same underlying algorithms:
 | QGIS Plugin | Processing Toolbox → ImageQualityToolset |
 | Command Line | `image_quality_toolset/scripts/mtf_computer.py` |
 
-> **Note:** The command line interface additionally allows defining an ROI using pixel coordinates (crop window), whereas the QGIS plugin requires a shapefile ROI.
+> **Note:** In QGIS, the ROI is a polygon vector layer (shapefile, GeoPackage, temporary layer…). The command line interface additionally allows defining an ROI using pixel coordinates (crop window).
 
 ---
 
@@ -65,7 +65,7 @@ The processing workflow follows these steps:
 flowchart LR
     A1["Image<br>[Raster and Band QGIS object]"] --> B["MTF Estimator"]
     A2["Area of Interest<br>[Shapefile QGIS object]"] --> B["MTF Estimator"]
-    A3["Parameters<br>- radiometric_scale<br>- radiometric_offset<br>- px_margin<br>- edge_direction<br>- ESF interpolation method<br>- esf_model"] --> B
+    A3["Parameters<br>- scale<br>- offset<br>- px_margin<br>- edge_direction<br>- esf_model<br>- sampling<br>- input_angle"] --> B
     B --> C1["Edge Image<br>[Matplotlib figure]"]
     B --> C2["ESF &amp; LSF estimation<br>[Matplotlib figure]"]
     B --> C3["MTF modulus estimation<br>[Matplotlib figure]"]
@@ -91,11 +91,13 @@ Several quality metrics are derived from the ESF, including SNR of the method, R
 | Model | Key | Description |
 |---|---|---|
 | Loess | `esf_loess` | Local polynomial regression combining local regression models |
-| Polynomial | `esf_polynomial` | Polynomial regression model |
+| Polynomial | `esf_to_eq_space_polynomial` | Polynomial regression model |
 
-### 2.2 MTF Pulse Method
+### 2.2 Bridge (Pulse) MTF
 
-Uses a pulse ROI (as close as possible to a Dirac function). Same processing as the Knife Edge method, except the ESF model is different. Functionality in progress.
+Uses a pulse ROI: a narrow bright line, or "bridge", on a uniform background (as close as possible to a Dirac function). Same processing as the Knife Edge method, except that the profile is modelled as a pulse of known width (`Bridge width`) with a polynomial ESF model. The bridge orientation is estimated automatically, or given as `Input rotation angle`.
+
+In QGIS it is the **Bridge Method MTF** algorithm; on the command line, `method = MTF_BRIDGE`.
 
 ### 2.3 SNR Estimator
 
@@ -109,7 +111,7 @@ Pre-processing involves conversion from digital number to radiance and configura
 flowchart LR
     A1["Image<br>[Raster and Band QGIS object]"] --> B["SNR Estimator"]
     A2["Area of Interest<br>[Shapefile QGIS object]"] --> B
-    A3["Parameters<br>- window_size<br>- snr_precision<br>- L_min<br>- L_max<br>- gsd"] --> B
+    A3["Parameters<br>- window_size<br>- snr_precision<br>- L_min<br>- L_max"] --> B
     B --> H["SNR Histogram Method"]
     B --> V["SNR Variogram Method"]
     H --> R[Results / Export]
@@ -220,25 +222,25 @@ conda env create -f image_quality_toolset/environment.yml
 conda activate mtf
 ```
 
-The environment file installs Python 3.9 and all required dependencies (NumPy, SciPy, Matplotlib, GDAL, QGIS, etc.).
+The environment file installs Python 3.9, QGIS and all required dependencies (NumPy, SciPy, Matplotlib, GDAL, loess, scikit-image, etc.).
 
 All mandatory libraries are listed in `image_quality_toolset/environment.yml`.
 
 #### Environment Variable Setup
 
-The `IMAGE_QUALITY_TOOL_HOME` environment variable must be set to the `image_quality_toolset` directory inside your clone. This variable must point to the `image_quality_toolset` directory in the cloned repository.
+The `IMAGE_QUALITY_TOOL_HOME` environment variable must point to the **root of your clone** of the repository (the folder that contains `image_quality_toolset/` and `test/`): the example configuration files use it, e.g. `$IMAGE_QUALITY_TOOL_HOME/test/data/...`.
 
 Set it as a conda environment variable so it is automatically available on activation:
 
 With mtf env activated:
 
 ```bash
-conda env config vars set IMAGE_QUALITY_TOOL_HOME=<path/to/image-quality-tool>
+conda env config vars set IMAGE_QUALITY_TOOL_HOME=<path/to/qgis-image-quality-toolset>
 conda deactivate
 conda activate mtf
 ```
 
-> **Note:** Replace `<path/to/image-quality-tool>` with the actual path to the cloned repository on your system.
+> **Note:** Replace `<path/to/qgis-image-quality-toolset>` with the actual path to the cloned repository on your system.
 
 > **Note:** After `conda env config vars set`, a deactivate/activate cycle is required for the variable to take effect.
 
@@ -250,7 +252,7 @@ echo $IMAGE_QUALITY_TOOL_HOME
 
 #### PYTHONPATH Configuration
 
-Add `IMAGE_QUALITY_TOOL_HOME` to your Python path so that internal modules are importable:
+Add the plugin folder to your Python path so that its internal modules are importable:
 
 ```bash
 conda env config vars set PYTHONPATH=${PYTHONPATH}:${IMAGE_QUALITY_TOOL_HOME}/image_quality_toolset
@@ -297,13 +299,13 @@ To select an image you can drop an image into the QGIS interface or use **Layer 
 
 #### 5.3.1 ROI Creation
 
-To create an ROI use **Create Layer > New Shapefile Layer**.
+To create an ROI use **Layer → Create Layer → New Shapefile Layer…**.
 
 Then a window appears in which the following fields must be completed:
 - **File name**: name of the ROI, a path can also be selected using `...`
 - **Geometry type**: pick **Polygon**
 
-Other fields are not mandatory.
+Other fields are not mandatory. For an image without georeferencing (pixel coordinates), leave the ROI without CRS too (no CRS selected): QGIS then draws the image and the ROI on top of each other.
 
 #### 5.3.2 ROI Edition
 
@@ -317,35 +319,15 @@ Use right-click to validate and press OK (id is optional).
 
 In the Processing Toolbox, double-click on the desired method to open its parameter panel.
 
-For **Knife Edge Method MTF**, the following parameters must be filled:
+Fill in the image (**Raster layer**, **Band number**), the ROI (**Area of interest**) and the parameters of the method, described with their default values in [Chapter 7](#7-parameters-reference). The **Analysis output directory** is optional: when set, the figures and the GeoPackage report are saved there (see [6.1.2](#612-outputs-export-option)).
 
-- Radiometric Scale
-- Radiometric Offset
-- Sampling Factor
-- Orientation Angle
-- Pixel Margin
-- MTF Profile
-- ESF Model
-- Raster Layer
-- Band Number
-- Area of interest
-
-For the **SNR Method**, the following parameters must be filled:
-
-- Window Size
-- SNR Precision
-- L min (radiance minimum)
-- L max (radiance maximum)
-- GSD (Ground Sample Distance in meters)
-- Raster Layer
-- Band Number
-- Area of Interest
+Click **Run**: the results are shown in the results panel on the right of QGIS.
 
 ---
 
 ## 6. Outputs
 
-### 6.1 MTF Processing Report (Knife Edge / Pulse)
+### 6.1 MTF Processing Report (Knife Edge / Bridge)
 
 The MTF Estimator produces two levels of output depending on user needs:
 
@@ -358,7 +340,7 @@ When the MTF Estimator finishes processing, a synthetic figure is produced as a 
 | Top-left | **ESF / LSF / MTF** | Normalized ESF, inflection point, LSF, FWHM marker, and Heaviside step function, all centered on the ESF inflection point |
 | Top-center | **Metrics Summary** | Text panel reporting: computation method, sampling factor, ROI dimensions (lines × columns), rotation angle, ESF length, MTF@Nyquist, MTF30, MTF50, SNR, RER, RER sample points, HEE upper/lower, FWHM, and R² |
 | Top-right | **MTF Curve** | MTF modulus vs. spatial frequency (Nyquist = 0.5 cy/px), with horizontal and vertical markers at MTF30, MTF50, and MTF@Nyquist |
-| Bottom-left | **ESF Interpolation** | Original ESF samples overlaid with the 2nd-order polynomial interpolated ESF |
+| Bottom-left | **ESF Interpolation** | Original ESF samples overlaid with the ESF interpolated by the selected ESF model |
 | Bottom-center | **HEE and RER** | Normalized ESF with 5 %, 50 %, and 95 % threshold lines, HEE lower and upper regions highlighted, and the two RER sample points marked |
 | Bottom-right | **LSF** | Line Spread Function normalized to its maximum |
 
@@ -436,40 +418,58 @@ The SNR Estimator produces a single multi-panel figure with four graphs:
 
 ## 7. Parameters Reference
 
-Both the QGIS Processing Toolbox interface and the command-line interface share the same underlying parameters.
+The QGIS dialog and the command line use the same parameters. The tables below give, for each method, the label in the QGIS dialog, the key in the INI configuration file of the command line (see [8.3](#83-configuration-file-format)) and the default value in QGIS. The command line has no default values: set every key the method uses.
+
+Radiometric conversion: `radiance = DN × Scale + Offset`. These values are sensor- and product-specific (see [Chapter 9](#9-data)).
 
 ### 7.1 Common Parameters
 
-These parameters apply to both the MTF Estimator and the SNR Estimator, regardless of the interface used.
-
-| Parameter | Description |
-|---|---|
-| `Raster layer` | Input image layer (any GDAL-supported format: TIFF, etc.) |
-| `Band number` | Band to process (1-based index). Default: 1 |
-| `Area of interest` | Polygon vector layer (shapefile) defining the ROI |
-
-### 7.2 MTF Estimator — Specific Parameters
-
-| Parameter | Type | Default | Description |
+| QGIS label | INI key | Default | Description |
 |---|---|---|---|
-| `radiometric_scale` | Float | 0.01 | Radiometric conversion scale of the sensor |
-| `radiometric_offset` | Float | 0.0 | Radiometric offset correction factor |
-| `px_margin` | Integer | 1 | Number of pixels to exclude at the edges of the ROI during edge detection |
-| `edge_direction` | Enum | AL | Orientation of the edge: `AL` (Along Track) or `CT` (Across Track) |
-| `esf_model` | Enum | sigmoid | Analytical model for ESF fitting (Parametric only): `sigmoid`, `esf_tanh`, `esf_fermi`, `esf_gauss_exp_param`, `esf_erf`; or non-parametric: `esf_loess`, `esf_polynomial` |
+| Raster layer | `image_path` (`[input]`) | — | Input image (any GDAL-supported format: TIFF, etc.) |
+| Band number | `band` | 1 | Band to process (1-based index) |
+| Area of interest | `ROI` (`[input]`) | — | Polygon vector layer (shapefile, GeoPackage…). Command line: path to a shapefile, or a crop window in pixel coordinates |
+| Analysis output directory | `dir` (`[debug]`) | — (optional) | Folder where the figures (and, in QGIS, the GeoPackage report) are saved |
 
-### 7.3 SNR Estimator — Specific Parameters
+### 7.2 Knife Edge Method MTF (`method = MTF`)
 
-| Parameter | Required | Description |
-|---|---|---|
-| `window_size` | yes | Window size for uniform filter (e.g., `5`) |
-| `snr_precision` | yes | SNR precision/bins width (e.g., `1.0`) |
-| `L_min` | no | Minimum radiance for SNR computation. If omitted, uses all valid pixels |
-| `L_max` | no | Maximum radiance for SNR computation. If omitted, uses all valid pixels |
-| `gsd` | no | Ground Sample Distance in meters (default: `30`) |
-| `nb_samples` | no | Number of sample points for variogram (default: `5000`) |
-| `lag` | no | Number of lag classes for variogram (default: `25`) |
-| `run_variogram_comparaison` | no | If `true`, run both skgstat and local implementations and compare results (default: `false`) |
+| QGIS label | INI key | Default | Description |
+|---|---|---|---|
+| Scale | `scale` | 0.01 | Radiometric scale |
+| Offset | `offset` | 1.0 | Radiometric offset |
+| Pixel margin | `px_margin` | 1 | Number of pixels excluded at the edges of the ROI during edge detection |
+| Edge direction | `edge_direction` | Along Track (`AL`) | `AL` (Along Track) or `CT` (Across Track) |
+| ESF model | `esf_model` | sigmoid | Parametric: `sigmoid`, `esf_tanh`, `esf_fermi`, `esf_gauss_exp_param`, `esf_erf`; non-parametric: `esf_loess`, `esf_to_eq_space_polynomial` (see [2.1](#21-knife-edge-mtf)) |
+| Sampling (oversampling factor) | `sampling` | 0.2 | Oversampling step of the ESF, between 0 and 1 |
+| Input rotation angle (degrees) | `input_angle` | empty | Edge angle; if empty, estimated from the edge |
+
+### 7.3 Bridge Method MTF (`method = MTF_BRIDGE`)
+
+| QGIS label | INI key | Default | Description |
+|---|---|---|---|
+| Scale | `scale` | 1.0 | Radiometric scale |
+| Offset | `offset` | 0.0 | Radiometric offset |
+| Pixel margin | `px_margin` | 0 | Number of pixels excluded at the edges of the ROI |
+| Bridge width (pixels) | `bridge_width` | 6.0 | Width of the bridge target, in pixels |
+| Edge direction | `edge_direction` | Along Track (`AL`) | `AL` (Along Track) or `CT` (Across Track) |
+| — | `esf_model` | `esf_to_eq_space_polynomial` | Fixed in QGIS; on the command line, any model of 7.2 |
+| Sampling (oversampling factor) | `sampling` | 0.1 | Oversampling step of the ESF, between 0 and 1 |
+| Input rotation angle (degrees) | `input_angle` | empty | Bridge angle; if empty, estimated from the bridge |
+
+### 7.4 Variogram Method SNR (`method = SNR`)
+
+| QGIS label | INI key | Default | Description |
+|---|---|---|---|
+| Window size | `window_size` | 5 | Window size of the uniform filter |
+| SNR precision | `snr_precision` | 1.0 | SNR precision (histogram bin width) |
+| L min (radiance minimum) | `L_min` | 0.0 | Minimum radiance of the pixels used |
+| L max (radiance maximum) | `L_max` | 1.0 | Maximum radiance of the pixels used: set it to the radiance range of your image |
+| Scale | — | 1.0 | Radiometric scale (QGIS only) |
+| Offset | — | 0.0 | Radiometric offset (QGIS only) |
+| — | `nb_samples` | 5000 | Number of sample points for the variogram (command line only) |
+| — | `lag` | 25 | Number of lag classes for the variogram (command line only) |
+
+> **Note:** on the command line, the SNR method uses `window_size`, `snr_precision`, `L_min` and `L_max` only with a shapefile ROI; with a crop window or the full image, it runs on the normalised image without them.
 
 ---
 
@@ -494,10 +494,10 @@ python image_quality_toolset/scripts/mtf_computer.py --config_file <path/to/my_c
 Or using a pre-configured example:
 
 ```bash
-python image_quality_toolset/scripts/mtf_computer.py --config_file image_quality_toolset/data/config_files/pan_target_MTF.ini
+python image_quality_toolset/scripts/mtf_computer.py --config_file test/data/config_files/pan_target_MTF.ini
 ```
 
-Results are displayed as Matplotlib figures. If debug is enabled, figures are also saved to the directory specified in `[debug] dir`.
+Results are displayed as Matplotlib figures. If `[debug] dir` is set, figures are also saved to that directory.
 
 ### 8.3 Configuration File Format
 
@@ -514,20 +514,18 @@ The script takes an INI configuration file as input. The file is organised in th
 
 | Parameter | Required | Description |
 |---|---|---|
-| `method` | yes | Algorithm to use: `MTF` (MTF Estimator) or `SNR` (SNR Estimator) |
+| `method` | yes | Algorithm to use: `MTF` (Knife Edge), `MTF_BRIDGE` (Bridge) or `SNR` (Variogram) |
 | `band` | yes | Band number to process (1-based) |
-| `radiometric_scale` | MTF only | Radiometric conversion scale (float). Default: `0.01` |
-| `radiometric_offset` | MTF only | Radiometric offset correction factor (float). Default: `0.0` |
-| `px_margin` | MTF only | Pixel margin for edge extraction (integer). Default: `1` |
-| `edge_direction` | MTF only | Edge direction: `AL` (Along Track) or `CT` (Across Track) |
-| `esf_model` | MTF only | ESF analytical model: `sigmoid`, `esf_tanh`, `esf_fermi`, `esf_gauss_exp_param`, `esf_erf`, `esf_loess`, `esf_polynomial` |
+| other keys | per method | The keys of the method: see [7.2](#72-knife-edge-method-mtf-method--mtf) (`MTF`), [7.3](#73-bridge-method-mtf-method--mtf_bridge) (`MTF_BRIDGE`) and [7.4](#74-variogram-method-snr-method--snr) (`SNR`) |
+
+> **Warning:** the keys are `scale` and `offset` (not `radiometric_scale` / `radiometric_offset`): an unknown key is ignored without any error.
 
 #### `[debug]` section
 
 | Parameter | Required | Description |
 |---|---|---|
-| `enabled` | no | Enable debug output (`true` / `false`). Default: `false` |
-| `dir` | no | Absolute path to the directory where output figures are saved |
+| `dir` | no | Directory where the output figures are saved. Environment variables are expanded |
+| `expert_mode` | no | `true` to also save the intermediate diagnostic figures (default: `false`) |
 
 ### 8.4 Configuration Examples
 
@@ -543,14 +541,14 @@ ROI = {'line': 13, 'pixel': 21, 'line_number': 16, 'pixel_number': 40}
 [parameters]
 method = MTF
 band = 1
-radiometric_scale = 0.01
-radiometric_offset = 0.0
-px_margin = 1
+scale = 0.01
+offset = 1
+px_margin = 0
 edge_direction = AL
 esf_model = sigmoid
+sampling = 0.2
 
 [debug]
-enabled = true
 dir = <path/to/output>
 ```
 
@@ -563,6 +561,7 @@ Pre-configured configuration files are available in `test/data/config_files/`:
 | `bagnolo_MTF.ini` | MTF | Sentinel-2 (target1) | Shapefile |
 | `pan_target_MTF.ini` | MTF | PAN target (target2) | Crop window |
 | `pneo_MTF.ini` | MTF | Pléiades Neo (target3) | Shapefile |
+| `MTF_bridge.ini` | MTF_BRIDGE | Bridge simulation (bridge) | Full image |
 | `desert_SNR.ini` | SNR | Landsat-9 (target4) | Shapefile |
 
 ---
@@ -572,15 +571,16 @@ Pre-configured configuration files are available in `test/data/config_files/`:
 The algorithms need an image and a ROI (Region of Interest) to work. Example datasets are available in the `test/data/` directory:
 
 - **`test/data/target1/`** — Bagnolo dataset: a Sentinel-2 raster (`T32TNR_20250619T101559_B04_10m_mtf_roi.tiff`) with a shapefile ROI (`shapefile/mtf_al_bagnolo.shp`). Used by `bagnolo_MTF.ini`.
-- **`test/data/target2/`** — PAN target dataset: a PAN image (`S100199aI_002_2_PAN_L0R_mtf_target.tif`) with a crop window ROI defined directly in the config. Used by `pan_target_MTF.ini`.
+- **`test/data/target2/`** — PAN target dataset: a PAN image without georeferencing (`S100199aI_002_2_PAN_L0R_mtf_target.tif`) with a shapefile ROI without CRS (`shapefile/mtf_mire.shp`), the same area as the crop window of `pan_target_MTF.ini`.
 - **`test/data/target3/`** — Pléiades Neo dataset: a multispectral image (`IMG_PNEO4_*.tif`) with a shapefile ROI (`shapefile/roi_mtf2.shp`). Used by `pneo_MTF.ini`.
+- **`test/data/bridge/`** — Bridge simulation: a 50×50 image of a 6-pixel-wide bridge (`simu_6px.tiff`) with a shapefile ROI (`shapefile/roi.shp`). Used by `MTF_bridge.ini`.
 - **`test/data/target4/`** — Desert dataset: a Landsat-9 raster (`LC09_L1TP_181040_20211121_20230505_02_T1_B5_rad_crop_2.tif`) with a shapefile ROI (`shapefile/ROI.shp`). Used by `desert_SNR.ini`.
 
 Note that shapefiles consist of multiple files (`.shp`, `.dbf`, `.shx`, `.prj`, `.cpg`, `.qix`) — all must be present for the shapefile to be functional.
 
-> **Note — geometry-free images**: The algorithms do not require the input image to have embedded geographic metadata (CRS, geotransform). A plain raster with no projection (like `target2`) is fully supported; the ROI can be defined as a pixel crop window in the config instead of a shapefile.
+> **Note — geometry-free images**: The algorithms do not require the input image to have embedded geographic metadata (CRS, geotransform). A plain raster with no projection (like `target2`) is fully supported: its coordinates are pixels (x = column, y = −row). In QGIS, use a ROI without CRS so that QGIS draws it on top of the image; on the command line, the ROI can also be a pixel crop window.
 
-> **Note — radiometric calibration**: The `scale` and `offset` parameters in the config control the conversion from raw DN to radiance (`radiance = DN × scale + offset`). These values are sensor- and product-specific and must be set by the user according to the image provider's documentation. No automatic calibration is applied.
+> **Note — radiometric calibration**: The `Scale` and `Offset` parameters (`scale` and `offset` in the config) control the conversion from raw DN to radiance (`radiance = DN × scale + offset`). These values are sensor- and product-specific and must be set by the user according to the image provider's documentation. No automatic calibration is applied.
 
 ---
 
@@ -650,7 +650,7 @@ All remaining Python files, including the plugin entry point, QGIS algorithm wra
 
 ## 12. References
 
-1. <a id="ref-1"></a>ESA ESAP [VHR HR and MR Optical missions webpage](https://earth.esa.int/eogateway/activities/edap/vhr-hr-mr-optical-missions), including access to Technical notes.
+1. <a id="ref-1"></a>ESA EDAP [VHR HR and MR Optical missions webpage](https://earth.esa.int/eogateway/activities/edap/vhr-hr-mr-optical-missions), including access to Technical notes.
 2. <a id="ref-2"></a>JACIE Best Practices for Remote Sensing System Evaluation and Reporting, Open-File Report 2024-1023.
 3. <a id="ref-3"></a>Earth Observation Mission Quality Assessment Framework – Optical Guidelines, EDAP.REP.002, 2021.
 4. <a id="ref-4"></a>[CEOS Cal/Val portal](https://calvalportal.ceos.org/fr/web/guest/calibration-test-sites) — Calibration Test Sites, Image Quality Workpackage.
