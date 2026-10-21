@@ -54,6 +54,12 @@ CASES = {
         "bridge/simu_6px.tiff", "bridge/shapefile/roi.shp",
         dict(SCALE=1, OFFSET=0, PX_MARGIN=0, BRIDGE_WIDTH=6.0, EDGE_DIRECTION=0, SAMPLING=0.1),
         {"MTF_NYQ": 0.0787, "MTF50": 0.2839}),
+    # raw image (no CRS, pixel coordinates) and a ROI with no CRS either (no .prj), so that QGIS
+    # draws them on top of each other: the window of config_files/pan_target_MTF.ini
+    "knife_edge_target2_nocrs": ("MTFEstimatorKnifeEdge",
+        "target2/S100199aI_002_2_PAN_L0R_mtf_target.tif", "target2/shapefile/roi_pan_edge.shp",
+        dict(SCALE=0.01, OFFSET=1, PX_MARGIN=0, EDGE_DIRECTION=0, ESF_MODEL=0, SAMPLING=0.2),
+        {"MTF_NYQ": 0.011, "MTF50": 0.153}),
     "snr_target4": ("SNREstimator",
         "target4/LC09_L1TP_181040_20211121_20230505_02_T1_B5_rad_crop_2.tif", "target4/shapefile/ROI.shp",
         dict(WINDOW_SIZE=5, SNR_PRECISION=0.1, L_MIN=100, L_MAX=160),

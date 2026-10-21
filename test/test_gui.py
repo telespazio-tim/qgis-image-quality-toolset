@@ -49,8 +49,41 @@ def main():
         deps = os.path.join(PARENT, "image_quality_toolset", "dependencies")  # holds one cpXY folder per Python
         for m in (loess, skimage):
             assert os.path.abspath(m.__file__).startswith(os.path.abspath(deps)), f"{m.__name__} not from the zip: {m.__file__}"
-    p.unload()
     print(f"OK: plugin started, {n} algorithms")
+    check_two_runs_in_the_dock(p)
+    p.unload()
+
+
+def check_two_runs_in_the_dock(p):
+    """Two runs shown in the real result dock, the ROI given as a file path: Processing opens a
+    temporary layer and deletes it after the run, so the second result used to fail with
+    "wrapped C/C++ object of type QgsVectorLayer has been deleted" (disconnecting the old ROI)."""
+    import tempfile
+    import traceback
+    from qgis.core import QgsProcessingContext, QgsProcessingFeedback, QgsProject
+
+    errors = []
+    sys.excepthook = lambda *exc: errors.append(exc)  # exceptions raised in Qt's event() land here
+    data = os.path.join(HERE, "data", "target2")
+    params = dict(RASTER=os.path.join(data, "S100199aI_002_2_PAN_L0R_mtf_target.tif"), BAND=1,
+                  ROI=os.path.join(data, "shapefile", "roi_pan_edge.shp"), SCALE=0.01, OFFSET=1, PX_MARGIN=0,
+                  EDGE_DIRECTION=0, ESF_MODEL=0, SAMPLING=0.2)
+    for _ in range(2):
+        alg = p.provider.algorithm("MTFEstimatorKnifeEdge").create()
+        context, feedback = QgsProcessingContext(), QgsProcessingFeedback()
+        context.setProject(QgsProject.instance())
+        run = dict(params, OUTPUT_DIRECTORY=tempfile.mkdtemp())
+        alg.prepare(run, context, feedback)
+        assert alg.run(run, context, feedback)[1], "knife edge failed"
+        del context  # deletes the temporary ROI layer, as after a run in QGIS
+        QCoreApplication.sendPostedEvents()  # the result event reaches the dock
+        QCoreApplication.processEvents()
+    sys.excepthook = sys.__excepthook__
+    for exc in errors:
+        traceback.print_exception(*exc)
+    assert not errors, f"result dock raised: {errors[0][1]!r}"
+    assert p.dock_widget.mtf is not None, "no result shown in the dock"
+    print("OK: two runs in the result dock (ROI from a file path)")
 
 
 if __name__ == "__main__":
