@@ -635,7 +635,7 @@ All remaining Python files, including the plugin entry point, QGIS algorithm wra
 
 ### In progress
 
-- **Installation from the official QGIS plugin repository** (plugins.qgis.org): version 1.0 is published; version 1.2 is awaiting approval by the QGIS team.
+- **Installation from the official QGIS plugin repository** (plugins.qgis.org): version 1.0 is published; version 1.1 is awaiting approval by the QGIS team.
 
 ### Known limitations
 
@@ -646,8 +646,7 @@ All remaining Python files, including the plugin entry point, QGIS algorithm wra
 
 | Version | Main changes |
 |---|---|
-| 1.2 | Knife Edge and Bridge methods fixed with `SCALE = 1` (raw DN); Bridge method fixed with non-rectangular ROIs; ROIs with no CRS accepted for raw images; results panel fix when the ROI is given as a file |
-| 1.1 | QGIS 4 / Qt 6 support; dependencies from a checked bundle instead of `pip`; fixes for recent NumPy versions and for macOS |
+| 1.1 | QGIS 4 / Qt 6 support; dependencies from a checked bundle instead of `pip`; fixes for recent NumPy versions and for macOS; Knife Edge and Bridge methods fixed with `SCALE = 1` (raw DN); Bridge method fixed with non-rectangular ROIs; ROIs with no CRS accepted for raw images; results panel fix when the ROI is given as a file |
 | 1.0 | Initial release: Knife Edge, Bridge and SNR methods, GeoPackage report, command-line interface |
 
 ---
