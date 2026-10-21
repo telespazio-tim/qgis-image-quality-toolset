@@ -1,0 +1,11 @@
+# Dependencies bundled in the release zips, for every Python in tools/build_zip.py (installed with
+# --no-deps: numpy/scipy/matplotlib (and its pillow) come from QGIS, so scikit-image's other dependencies are listed here).
+# Bounded, not exact: scikit-image releases drop old Pythons. The versions actually bundled are written to
+# bundled-versions.txt in each zip.
+loess==2.1.2
+scikit-image>=0.22,<0.27
+imageio
+tifffile
+lazy_loader
+networkx
+packaging

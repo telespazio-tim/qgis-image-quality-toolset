@@ -136,7 +136,7 @@ def sigmoide(x, R, passpline):
     x_cut = x1[bmin:bmax]
     y_cut = y[bmin:bmax]
 
-    i = int(np.where(x_cut == a3)[0])
+    i = int(np.where(x_cut == a3)[0][0])
     nb_measurement_left = len(x_cut[bmin: i])
     nb_measurement_right = len(x_cut[i: bmax])
 
@@ -730,7 +730,7 @@ def fLOESS(noisy, span):
         YY = np.array(
             [[np.nansum(w_ * y_ * (x_ ** 0))], [np.nansum(w_ * y_ * (x_ ** 1))], [np.nansum(w_ * y_ * (x_ ** 2))]])
 
-        CC = linalg.solve(XX, YY)
+        CC = linalg.solve(XX, YY).ravel()
 
         smoothed[i] = CC[0] + CC[1] * x[i] + CC[2] * x[i] ** 2
 

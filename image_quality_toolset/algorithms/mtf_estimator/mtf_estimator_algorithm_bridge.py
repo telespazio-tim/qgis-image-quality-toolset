@@ -61,7 +61,7 @@ class MTFEstimatorAlgorithmBridge(BaseMTFEstimatorAlgorithm):
             QgsProcessingParameterNumber(
                 self.SCALE,
                 self.tr("Scale"),
-                type=QgsProcessingParameterNumber.Double,
+                type=QgsProcessingParameterNumber.Type.Double,
                 defaultValue=1.00
             )
         )
@@ -69,7 +69,7 @@ class MTFEstimatorAlgorithmBridge(BaseMTFEstimatorAlgorithm):
             QgsProcessingParameterNumber(
                 self.OFFSET,
                 self.tr("Offset"),
-                type=QgsProcessingParameterNumber.Double,
+                type=QgsProcessingParameterNumber.Type.Double,
                 defaultValue=0.0
             )
         )
@@ -77,7 +77,7 @@ class MTFEstimatorAlgorithmBridge(BaseMTFEstimatorAlgorithm):
             QgsProcessingParameterNumber(
                 self.PX_MARGIN,
                 self.tr("Pixel margin"),
-                type=QgsProcessingParameterNumber.Integer,
+                type=QgsProcessingParameterNumber.Type.Integer,
                 defaultValue=0
             )
         )
@@ -85,7 +85,7 @@ class MTFEstimatorAlgorithmBridge(BaseMTFEstimatorAlgorithm):
             QgsProcessingParameterNumber(
                 self.BRIDGE_WIDTH,
                 self.tr("Bridge width (pixels)"),
-                type=QgsProcessingParameterNumber.Double,
+                type=QgsProcessingParameterNumber.Type.Double,
                 defaultValue=6.0
             )
         )
@@ -101,7 +101,7 @@ class MTFEstimatorAlgorithmBridge(BaseMTFEstimatorAlgorithm):
             QgsProcessingParameterNumber(
                 self.SAMPLING,
                 self.tr("Sampling (oversampling factor)"),
-                type=QgsProcessingParameterNumber.Double,
+                type=QgsProcessingParameterNumber.Type.Double,
                 defaultValue=0.1,
                 minValue=0.0,
                 maxValue=1.0
@@ -110,7 +110,7 @@ class MTFEstimatorAlgorithmBridge(BaseMTFEstimatorAlgorithm):
         input_rotation_param = QgsProcessingParameterNumber(
             self.INPUT_ROTATION,
             self.tr("Input rotation angle (degrees)"),
-            type=QgsProcessingParameterNumber.Double,
+            type=QgsProcessingParameterNumber.Type.Double,
             optional=True
         )
         input_rotation_param.setHelp(self.tr("If left empty, the rotation angle is automatically estimated from the edge."))

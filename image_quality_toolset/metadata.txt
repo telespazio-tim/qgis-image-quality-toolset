@@ -13,8 +13,9 @@ about=The Image Quality Toolset is a QGIS plugin developed in the context of the
     Each method requires an input raster and a polygon ROI (shapefile). Radiometric scale and offset parameters allow conversion from raw DN to radiance. Results are accumulated across runs in a GeoPackage report, one feature per analysis, with full metadata and geometry.
 
     The plugin uses a dual-license model: the QGIS integration layer is released under GPL v3; the core signal-processing algorithms (MTF, SNR, ESF models, variogram) are released under Apache 2.0.
-version=1.0
-qgisMinimumVersion=3.0
+version=1.1
+qgisMinimumVersion=3.38
+qgisMaximumVersion=4.99
 author=Telespazio TIM
 email=sen2like@telespazio.com
 category=Analysis
@@ -29,8 +30,11 @@ supportsQt6=True
 hasProcessingProvider=yes
 experimental=False
 deprecated=False
-plugin_dependencies=
 changelog=
+    ImageQualityToolset 1.1
+        - QGIS 4 / Qt 6 support (also QGIS 3.38+).
+        - Dependencies (loess, scikit-image) now come from a prebuilt bundle downloaded at first run and checked against a checksum, instead of pip. Status and errors are shown in the results panel; offline install is possible by dropping the bundle in the plugin folder.
+        - Fixed the Bridge method on recent NumPy versions.
     ImageQualityToolset 1.0 - Initial release.
         - MTF Knife Edge Method: computes MTF from a sharp-edge ROI with parametric (sigmoid, tanh, Fermi, erf, Gaussian-exponential) and non-parametric (Loess, polynomial) ESF models. Reports MTF@Nyquist, MTF30, MTF50, FWHM, RER, HEE, SNR, and R².
         - MTF Bridge (Pulse) Method: computes MTF from a pulse/bridge target ROI.

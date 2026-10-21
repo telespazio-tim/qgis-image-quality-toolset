@@ -57,7 +57,7 @@ class MTFEstimatorAlgorithmKnifeEdge(BaseMTFEstimatorAlgorithm):
             QgsProcessingParameterNumber(
                 self.SCALE,
                 self.tr("Scale"),
-                type=QgsProcessingParameterNumber.Double,
+                type=QgsProcessingParameterNumber.Type.Double,
                 defaultValue=0.01
             )
         )
@@ -65,7 +65,7 @@ class MTFEstimatorAlgorithmKnifeEdge(BaseMTFEstimatorAlgorithm):
             QgsProcessingParameterNumber(
                 self.OFFSET,
                 self.tr("Offset"),
-                type=QgsProcessingParameterNumber.Double,
+                type=QgsProcessingParameterNumber.Type.Double,
                 defaultValue=1.0
             )
         )
@@ -73,7 +73,7 @@ class MTFEstimatorAlgorithmKnifeEdge(BaseMTFEstimatorAlgorithm):
             QgsProcessingParameterNumber(
                 self.PX_MARGIN,
                 self.tr("Pixel margin"),
-                type=QgsProcessingParameterNumber.Integer,
+                type=QgsProcessingParameterNumber.Type.Integer,
                 defaultValue=1
             )
         )
@@ -97,7 +97,7 @@ class MTFEstimatorAlgorithmKnifeEdge(BaseMTFEstimatorAlgorithm):
             QgsProcessingParameterNumber(
                 self.SAMPLING,
                 self.tr("Sampling (oversampling factor)"),
-                type=QgsProcessingParameterNumber.Double,
+                type=QgsProcessingParameterNumber.Type.Double,
                 defaultValue=0.2,
                 minValue=0.0,
                 maxValue=1.0
@@ -106,7 +106,7 @@ class MTFEstimatorAlgorithmKnifeEdge(BaseMTFEstimatorAlgorithm):
         input_rotation_param = QgsProcessingParameterNumber(
             self.INPUT_ROTATION,
             self.tr("Input rotation angle (degrees)"),
-            type=QgsProcessingParameterNumber.Double,
+            type=QgsProcessingParameterNumber.Type.Double,
             optional=True
         )
         input_rotation_param.setHelp(self.tr("If left empty, the rotation angle is automatically estimated from the edge."))

@@ -1,0 +1,334 @@
+name: install-tests
+
+on:
+  push:
+    branches: [develop]
+    tags: ["v*"]
+  pull_request:
+    branches: [develop]
+
+jobs:
+  # Fast checks that need no QGIS: Qt6-incompatible enums, and the layout/metadata of the zip.
+  lint:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - run: python3 test/check_qt6_enums.py
+      - run: make build && python3 test/check_zip.py dist/*.zip
+
+  # Wheel packs: loess and scikit-image (compiled, so one pack per platform and Python), downloaded by the
+  # plugin at first run. numpy/scipy/matplotlib come from QGIS. Pythons: QGIS 3 ships 3.9-3.13, QGIS 4 3.12-3.14.
+  # tags = wheel platform tags for pip (macos-14 / ubuntu-22.04 = oldest runners, widest compatibility)
+  packs:
+    name: packs (${{ matrix.platform }})
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - {os: ubuntu-22.04, platform: linux-x64, tags: "manylinux2014_x86_64 manylinux_2_28_x86_64"}
+          - {os: windows-latest, platform: win-x64, tags: "win_amd64"}
+          - {os: macos-14, platform: macos-arm64, tags: "macosx_11_0_arm64 macosx_12_0_arm64 macosx_13_0_arm64 macosx_14_0_arm64 macosx_15_0_arm64"}
+          - {os: macos-15-intel, platform: macos-x64, tags: "macosx_10_13_x86_64 macosx_10_15_x86_64 macosx_11_0_x86_64 macosx_12_0_x86_64 macosx_13_0_x86_64 macosx_14_0_x86_64 macosx_15_0_x86_64"}
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - shell: bash
+        run: |
+          python tools/build_zip.py packs packs ${{ matrix.platform }} 3.9,3.10,3.11,3.12,3.13,3.14 ${{ matrix.tags }} | tee -a "$GITHUB_STEP_SUMMARY"
+          ls -l packs
+      - uses: actions/upload-artifact@v4
+        with:
+          name: packs-${{ matrix.platform }}
+          path: packs/*.zip
+
+  # The plugin zip users install: no dependencies inside, deps-sha256.txt lists the packs of every platform.
+  package:
+    needs: packs
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: packs-*
+          path: packs
+          merge-multiple: true
+      - run: |
+          V=$(grep '^version=' image_quality_toolset/metadata.txt | cut -d= -f2)
+          python3 tools/build_zip.py plugin "out/image_quality_toolset-$V.zip" packs
+          python3 test/check_zip.py out/*.zip
+      - uses: actions/upload-artifact@v4
+        with:
+          name: plugin-zip
+          path: out/*.zip
+
+  install:
+    name: install (${{ matrix.os }}, qgis${{ matrix.qgis }})
+    needs: package
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-22.04, ubuntu-24.04, ubuntu-26.04, windows-latest, macos-14, macos-15, macos-15-intel, macos-26]  # linux / win64 / osx (arm64 + intel)
+        qgis: ["3", "4"]
+        exclude:
+          - {os: macos-15-intel, qgis: "4"}  # failing after 46 min, not generated
+        include:  # which wheel packs each runner tests
+          - {os: ubuntu-22.04, platform: linux-x64}
+          - {os: ubuntu-24.04, platform: linux-x64}
+          - {os: ubuntu-26.04, platform: linux-x64}
+          - {os: windows-latest, platform: win-x64}
+          - {os: macos-14, platform: macos-arm64}
+          - {os: macos-15, platform: macos-arm64}
+          - {os: macos-26, platform: macos-arm64}
+          - {os: macos-15-intel, platform: macos-x64}
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        shell: bash -el {0}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Show OS version
+        run: uname -a; if [ "$RUNNER_OS" = macOS ]; then sw_vers; fi
+      - uses: conda-incubator/setup-miniconda@v3
+        with:
+          miniforge-version: latest
+          channels: conda-forge
+          channel-priority: strict
+          activate-environment: mtf
+      - name: Install QGIS and dependencies
+        run: |
+          conda install -y "qgis=${{ matrix.qgis }}.*" numpy scipy matplotlib scikit-image pip
+          pip install loess==2.1.2
+      - name: Install plugin, smoke test and run algorithms
+        env:
+          QT_QPA_PLATFORM: offscreen
+        run: |
+          # conda-forge qgis on Windows keeps its Python bindings under Library/
+          if [ "$RUNNER_OS" = Windows ]; then
+            export PYTHONPATH="$CONDA_PREFIX\\Library\\python;$CONDA_PREFIX\\Library\\python\\plugins"
+            export QGIS_PREFIX_PATH="$CONDA_PREFIX\\Library"
+          fi
+          python test/test_install.py
+          python test/test_algorithms.py
+      # Install from the zip as a user would: remove the dependencies from the environment, forbid pip
+      # downloads, serve the wheel packs locally (stands in for the GitHub release), then start the plugin
+      # (it downloads and verifies its pack) and run the algorithms.
+      - uses: actions/download-artifact@v4
+        with:
+          name: plugin-zip
+          path: out
+      - uses: actions/download-artifact@v4
+        with:
+          name: packs-${{ matrix.platform }}
+          path: packs
+      - name: Test the plugin zip
+        env:
+          QT_QPA_PLATFORM: offscreen
+          IQT_PACK_BASE_URL: http://127.0.0.1:18431
+        run: |
+          if [ "$RUNNER_OS" = Windows ]; then
+            export PYTHONPATH="$CONDA_PREFIX\\Library\\python;$CONDA_PREFIX\\Library\\python\\plugins"
+            export QGIS_PREFIX_PATH="$CONDA_PREFIX\\Library"
+          fi
+          pip uninstall -y loess scikit-image imageio tifffile lazy_loader networkx
+          if python -c "import loess" 2>/dev/null; then echo "loess still in the environment" >&2; exit 1; fi
+          mkdir unzipped
+          python -c "import glob,zipfile; zipfile.ZipFile(glob.glob('out/*.zip')[0]).extractall('unzipped')"
+          python -m http.server 18431 --bind 127.0.0.1 --directory packs > /dev/null 2>&1 &
+          SERVER=$!
+          export IQT_PLUGIN_PARENT="$PWD/unzipped"
+          python test/test_install.py
+          python test/test_gui.py
+          python test/test_algorithms.py
+          kill $SERVER
+
+  # Every wheel pack imports under its Python on the real OS (no QGIS: numpy and scipy from PyPI).
+  bundle-compat:
+    name: bundle-compat (${{ matrix.platform }}, python ${{ matrix.python }})
+    needs: packs
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-22.04, windows-latest, macos-14, macos-15-intel]
+        python: ["3.9", "3.10", "3.11", "3.12", "3.13", "3.14"]
+        include:
+          - {os: ubuntu-22.04, platform: linux-x64}
+          - {os: windows-latest, platform: win-x64}
+          - {os: macos-14, platform: macos-arm64}
+          - {os: macos-15-intel, platform: macos-x64}
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+      - uses: actions/download-artifact@v4
+        with:
+          name: packs-${{ matrix.platform }}
+          path: packs
+      - run: python -m pip install numpy scipy
+      - run: python test/check_bundle_imports.py packs/*.zip
+        shell: bash
+
+  # Official QGIS .dmg (the bundle end users install), as opposed to conda-forge above.
+  # The bundle needs a recent macOS, so failures on macos-14 are expected to show the
+  # "built for Mac OS X 15.0" libc++ error. Not blocking: bundle paths may need tuning.
+  dmg:
+    name: dmg (${{ matrix.os }}, ${{ matrix.qgis }} ${{ matrix.channel }})
+    needs: package   # tests the plugin zip with the macos-arm64 packs
+    if: ${{ !cancelled() }}
+    continue-on-error: true
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-14, macos-15, macos-26]
+        # ltr = Long Term Release (stable, bug fixes only), pr = Point Release (latest, newest features).
+        # The major version of each is an assumption: check the version in the run summary.
+        channel: [ltr, pr]   # https://qgis.org/downloads/macos/qgis-macos-<channel>.dmg
+        include:  # adds the label to the matching channel
+          - {channel: ltr, qgis: qgis3}
+          - {channel: pr, qgis: qgis4}
+    runs-on: ${{ matrix.os }}
+    env:
+      QT_QPA_PLATFORM: offscreen
+    steps:
+      - uses: actions/checkout@v4
+      - name: Show OS version
+        run: sw_vers
+      - name: Install official QGIS dmg
+        run: |
+          curl -fL --retry 6 --retry-delay 20 --retry-all-errors --connect-timeout 30 -o qgis.dmg "https://qgis.org/downloads/macos/qgis-macos-${{ matrix.channel }}.dmg"
+          MNT=$(hdiutil attach qgis.dmg -nobrowse | grep -o '/Volumes/.*' | head -1)
+          ls "$MNT"
+          cp -R "$MNT"/QGIS*.app /Applications/
+          ls -d /Applications/QGIS*.app
+          defaults read /Applications/QGIS*.app/Contents/Info CFBundleShortVersionString | tee -a "$GITHUB_STEP_SUMMARY"
+      - name: Install extra dependencies in the bundle Python
+        run: |
+          APP=$(ls -d /Applications/QGIS*.app | head -1)
+          # The interpreter moved across QGIS releases: recent bundles ship
+          # Contents/MacOS/python (a wrapper that sets PYTHONHOME), older ones
+          # used Contents/MacOS/bin/python3 or Contents/Frameworks/bin/python3.
+          # See https://github.com/qgis/QGIS/issues/62927
+          PY=""
+          for cand in "$APP/Contents/MacOS/python" "$APP/Contents/MacOS/bin/python3" "$APP/Contents/Frameworks/bin/python3"; do
+            if [ -x "$cand" ]; then PY="$cand"; break; fi
+          done
+          if [ -z "$PY" ]; then
+            echo "No Python interpreter found under $APP/Contents; candidates were:" >&2
+            find "$APP/Contents" -maxdepth 3 \( -name 'python3*' -o -name python \) >&2
+            exit 1
+          fi
+          echo "APP=$APP" >> "$GITHUB_ENV"; echo "PY=$PY" >> "$GITHUB_ENV"
+          "$PY" --version
+          "$PY" -m pip install --target "$RUNNER_TEMP/extra" loess==2.1.2 scikit-image
+      - name: Install plugin and run tests with the bundle Python
+        run: |
+          # QGIS 4 installs its data (including the processing plugin) under
+          # Contents/Resources/qgis, and the bundle prefix is the .app root
+          # itself -- not Contents/MacOS. The python bindings live in the
+          # Frameworks site-packages and are already picked up by $PY
+          # (Contents/MacOS/python). See QgsApplication/QGIS_MAC_BUNDLE.
+          export PYTHONPATH="$APP/Contents/Resources/qgis/python/plugins:$APP/Contents/Resources/python/plugins:$RUNNER_TEMP/extra"
+          export QGIS_PREFIX_PATH="$APP"
+          "$PY" test/test_install.py
+          "$PY" test/test_algorithms.py
+      # the zip users download: dependencies come from its wheel pack (served locally, no pip index)
+      - uses: actions/download-artifact@v4
+        with:
+          name: plugin-zip
+          path: out
+      - uses: actions/download-artifact@v4
+        with:
+          name: packs-macos-arm64
+          path: packs
+      - name: Test the plugin zip with the bundle Python
+        env:
+          IQT_PACK_BASE_URL: http://127.0.0.1:18431
+        run: |
+          export PYTHONPATH="$APP/Contents/Resources/qgis/python/plugins:$APP/Contents/Resources/python/plugins"
+          export QGIS_PREFIX_PATH="$APP"
+          mkdir unzipped
+          "$PY" -c "import glob,zipfile; zipfile.ZipFile(glob.glob('out/*.zip')[0]).extractall('unzipped')"
+          "$PY" -m http.server 18431 --bind 127.0.0.1 --directory packs > /dev/null 2>&1 &
+          SERVER=$!
+          export IQT_PLUGIN_PARENT="$PWD/unzipped"
+          "$PY" test/test_install.py
+          "$PY" test/test_gui.py
+          "$PY" test/test_algorithms.py
+          kill $SERVER
+
+  # Distribution QGIS from the qgis.org apt repository with the system Python and no pip:
+  # what most Linux users have. Tests the plugin zip with the linux-x64 packs.
+  # Not blocking until it has passed once.
+  apt:
+    name: apt (${{ matrix.channel }})
+    needs: package
+    if: ${{ !cancelled() }}
+    continue-on-error: true
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        channel: [ltr, latest]   # https://qgis.org/ubuntu-ltr and https://qgis.org/ubuntu
+    env:
+      QT_QPA_PLATFORM: offscreen
+      IQT_PACK_BASE_URL: http://127.0.0.1:18431
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install QGIS from apt
+        run: |
+          [ "${{ matrix.channel }}" = ltr ] && REPO=ubuntu-ltr || REPO=ubuntu
+          sudo mkdir -m755 -p /etc/apt/keyrings
+          sudo wget -q --tries=6 --waitretry=20 --retry-connrefused --retry-on-http-error=429,500,502,503,504 -O /etc/apt/keyrings/qgis-archive-keyring.gpg https://download.qgis.org/downloads/qgis-archive-keyring.gpg
+          printf 'Types: deb\nURIs: https://qgis.org/%s\nSuites: noble\nArchitectures: amd64\nComponents: main\nSigned-By: /etc/apt/keyrings/qgis-archive-keyring.gpg\n' "$REPO" \
+            | sudo tee /etc/apt/sources.list.d/qgis.sources
+          sudo apt-get -o Acquire::Retries=6 update
+          sudo apt-get -o Acquire::Retries=6 install -y qgis python3-qgis python3-numpy python3-scipy python3-matplotlib
+      - name: QGIS version
+        run: |
+          export PYTHONPATH=/usr/share/qgis/python
+          /usr/bin/python3 -c "from qgis.core import Qgis; print(Qgis.version())" | tee -a "$GITHUB_STEP_SUMMARY"
+      - uses: actions/download-artifact@v4
+        with:
+          name: plugin-zip
+          path: out
+      - uses: actions/download-artifact@v4
+        with:
+          name: packs-linux-x64
+          path: packs
+      - name: Test the plugin zip with the system Python
+        run: |
+          export PYTHONPATH=/usr/share/qgis/python
+          mkdir unzipped
+          /usr/bin/python3 -c "import glob,zipfile; zipfile.ZipFile(glob.glob('out/*.zip')[0]).extractall('unzipped')"
+          /usr/bin/python3 -m http.server 18431 --bind 127.0.0.1 --directory packs > /dev/null 2>&1 &
+          SERVER=$!
+          export IQT_PLUGIN_PARENT="$PWD/unzipped"
+          /usr/bin/python3 test/test_install.py
+          /usr/bin/python3 test/test_gui.py
+          /usr/bin/python3 test/test_algorithms.py
+          kill $SERVER
+
+  # On a tag vX.Y: attach the plugin zip and the wheel packs the plugin downloads (the URL contains vX.Y).
+  release:
+    needs: [install, bundle-compat, package]
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: "{packs-*,plugin-zip}"
+          path: release
+          merge-multiple: true
+      - env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          V=$(grep '^version=' image_quality_toolset/metadata.txt | cut -d= -f2)
+          [ "$GITHUB_REF_NAME" = "v$V" ] || { echo "tag $GITHUB_REF_NAME does not match metadata version $V" >&2; exit 1; }
+          gh release create "$GITHUB_REF_NAME" release/*.zip --generate-notes
