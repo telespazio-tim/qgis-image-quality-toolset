@@ -138,25 +138,29 @@ As reporting, beside a GeoPackage file, a panel figure is generated displaying:
 
 The plugin and its dependencies install without any command line, `pip` or Python setup. There are two ways to install it.
 
-#### 3.2.1 From the plugin ZIP file (GitHub release)
+> **Important — install the plugin only once.** Choose **one** of the two methods below. Both install the same plugin (**ImageQualityToolset**) in the same plugins folder, so installing it a second time with the other method replaces the first installation, possibly with another version. To switch from one method to the other, first uninstall the plugin (**Plugins → Manage and Install Plugins… → Installed → ImageQualityToolset → Uninstall Plugin**), restart QGIS, then install it again.
+
+#### 3.2.1 From the official QGIS plugin repository (recommended)
+
+The plugin is published on [plugins.qgis.org](https://plugins.qgis.org/plugins/image_quality_toolset/). New versions are available there once the QGIS team has approved them.
+
+1. In QGIS, go to **Plugins → Manage and Install Plugins… → All**.
+2. Search for **`MTF`**, **`Image Quality`** or **`SNR`**, select **ImageQualityToolset** and click **Install Plugin**.
+3. At first start, the plugin downloads and installs its dependencies; progress is shown in the results panel on the right.
+4. Open the **Processing Toolbox** (**Processing → Toolbox**, or `Ctrl+Alt+T`) and type **`MTF`** or **`SNR`** in its search bar: the algorithms appear under **ImageQualityToolset** (Knife Edge, Bridge and SNR methods).
+
+Installed copies are then updated from **Plugins → Manage and Install Plugins… → Upgradeable**.
+
+#### 3.2.2 From the plugin ZIP file (GitHub release)
 
 1. Open the [Releases page](https://github.com/telespazio-tim/qgis-image-quality-toolset/releases) and download **`image_quality_toolset-<version>.zip`** from the assets of the latest release.
 
    > **Warning:** do not use the **Source code (zip)** archive that GitHub adds to every release: it contains the whole repository, not the plugin, and QGIS fails to load it (`No module named 'qgis-image-quality-toolset-…'`).
 
 2. In QGIS, go to **Plugins → Manage and Install Plugins… → Install from ZIP**, select the downloaded file and click **Install Plugin**.
-3. At first start, the plugin downloads and installs its dependencies; progress is shown in the results panel on the right.
-4. Open the **Processing Toolbox** (**Processing → Toolbox**, or `Ctrl+Alt+T`) and type **`MTF`** or **`SNR`** in its search bar: the algorithms appear under **ImageQualityToolset** (Knife Edge, Bridge and SNR methods).
+3. As with the QGIS plugin repository, the dependencies install at first start, and the algorithms are found by typing **`MTF`** or **`SNR`** in the Processing Toolbox.
 
-#### 3.2.2 From the official QGIS plugin repository
-
-The plugin is published on [plugins.qgis.org](https://plugins.qgis.org/plugins/image_quality_toolset/). New versions are available there once the QGIS team has approved them.
-
-1. In QGIS, go to **Plugins → Manage and Install Plugins… → All**.
-2. Search for **`MTF`**, **`Image Quality`** or **`SNR`**, select **ImageQualityToolset** and click **Install Plugin**.
-3. As with the ZIP file, the dependencies install at first start, and the algorithms are found by typing **`MTF`** in the Processing Toolbox.
-
-Installed copies are then updated from **Plugins → Manage and Install Plugins… → Upgradeable**.
+Use the ZIP file when the latest release is not yet available on the QGIS plugin repository (new versions appear there only after the QGIS team has approved them), or on a computer that cannot reach plugins.qgis.org.
 
 ### 3.3 QGIS Plugin — Manual Installation (development only)
 
