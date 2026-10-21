@@ -144,7 +144,7 @@ The plugin and its dependencies install without any command line, `pip` or Pytho
 
 2. In QGIS, go to **Plugins → Manage and Install Plugins… → Install from ZIP**, select the downloaded file and click **Install Plugin**.
 3. At first start, the plugin downloads and installs its dependencies; progress is shown in the results panel on the right.
-4. Open the **Processing Toolbox** (**Processing → Toolbox**, or `Ctrl+Alt+T`) and type **`MTF`** in its search bar: the algorithms appear under **ImageQualityToolset** (Knife Edge, Bridge and SNR methods).
+4. Open the **Processing Toolbox** (**Processing → Toolbox**, or `Ctrl+Alt+T`) and type **`MTF`** or **`SNR`** in its search bar: the algorithms appear under **ImageQualityToolset** (Knife Edge, Bridge and SNR methods).
 
 #### 3.2.2 From the official QGIS plugin repository
 
@@ -209,17 +209,7 @@ The plugin needs `loess` and `scikit-image` in addition to the libraries shipped
   `/Applications/QGIS.app/Contents/MacOS/python -m pip install loess==2.1.2 scikit-image`
 - **Linux:** `python3 -m pip install --user loess==2.1.2 scikit-image`
 
-#### 5. Enable the plugin
-
-![Plugin in Installed Plugins](image_quality_toolset/documents/manual_Installation_img_1.png)
-
-Restart QGIS, then in **Plugins → Manage and Install Plugins… → Installed**, check **ImageQualityToolset** to enable it.
-
-![Plugin Available in QGIS](image_quality_toolset/documents/manual_Installation_img_2.png)
-
-The algorithms are in the **Processing Toolbox** (**Processing → Toolbox**, or `Ctrl+Alt+T`): type **`MTF`** in its search bar, or expand **ImageQualityToolset**. If the dependencies are missing, the results panel on the right says which ones.
-
-To reload the plugin after changing the code without restarting QGIS, install the **Plugin Reloader** plugin from the QGIS plugin repository.
+After installing, enable the plugin (see [Chapter 4](#4-enable-the-plugin)).
 
 ### 3.4 Development Environment Setup
 
@@ -270,9 +260,26 @@ conda activate mtf
 
 ---
 
-## 4. Usage — QGIS Plugin
+## 4. Enable the plugin
 
-### 4.1 Available Methods
+![Plugin in Installed Plugins](image_quality_toolset/documents/manual_Installation_img_1.png)
+
+- **Automatic installation** (ZIP file or QGIS plugin repository, see 3.2): QGIS enables the plugin as soon as it is installed.
+- **Manual installation** (see 3.3): restart QGIS, then in **Plugins → Manage and Install Plugins… → Installed**, check **ImageQualityToolset** to enable it.
+
+In both cases, the plugin is listed in **Plugins → Manage and Install Plugins… → Installed**, where it can be disabled or uninstalled.
+
+![Plugin Available in QGIS](image_quality_toolset/documents/manual_Installation_img_2.png)
+
+The algorithms are in the **Processing Toolbox** (**Processing → Toolbox**, or `Ctrl+Alt+T`): type **`MTF`** or **`SNR`** in its search bar, or expand **ImageQualityToolset**. They appear once the dependency check has finished; if dependencies are missing, the results panel on the right says which ones.
+
+For development, the **Plugin Reloader** plugin (from the QGIS plugin repository) reloads the plugin after a code change without restarting QGIS.
+
+---
+
+## 5. Usage — QGIS Plugin
+
+### 5.1 Available Methods
 
 In the Processing Toolbox, under **ImageQualityToolset**, 3 methods are available:
 
@@ -282,13 +289,13 @@ In the Processing Toolbox, under **ImageQualityToolset**, 3 methods are availabl
 
 All these methods need an image and a ROI to work.
 
-### 4.2 Image Selection
+### 5.2 Image Selection
 
 To select an image you can drop an image into the QGIS interface or use **Layer > Add Layer > Add Raster Layer…** and then select an image as Raster dataset.
 
-### 4.3 ROI Preparation
+### 5.3 ROI Preparation
 
-#### 4.3.1 ROI Creation
+#### 5.3.1 ROI Creation
 
 To create an ROI use **Create Layer > New Shapefile Layer**.
 
@@ -298,7 +305,7 @@ Then a window appears in which the following fields must be completed:
 
 Other fields are not mandatory.
 
-#### 4.3.2 ROI Edition
+#### 5.3.2 ROI Edition
 
 Use **Toggle Edition** then **Add Polygon Feature**.
 
@@ -306,7 +313,7 @@ Then select the 4 points on the image to make the wanted ROI.
 
 Use right-click to validate and press OK (id is optional).
 
-### 4.4 Running a Method
+### 5.4 Running a Method
 
 In the Processing Toolbox, double-click on the desired method to open its parameter panel.
 
@@ -336,13 +343,13 @@ For the **SNR Method**, the following parameters must be filled:
 
 ---
 
-## 5. Outputs
+## 6. Outputs
 
-### 5.1 MTF Processing Report (Knife Edge / Pulse)
+### 6.1 MTF Processing Report (Knife Edge / Pulse)
 
 The MTF Estimator produces two levels of output depending on user needs:
 
-#### 5.1.1 Synthetic view
+#### 6.1.1 Synthetic view
 
 When the MTF Estimator finishes processing, a synthetic figure is produced as a 2×3 grid of six panels providing an at-a-glance summary of the main results:
 
@@ -355,7 +362,7 @@ When the MTF Estimator finishes processing, a synthetic figure is produced as a 
 | Bottom-center | **HEE and RER** | Normalized ESF with 5 %, 50 %, and 95 % threshold lines, HEE lower and upper regions highlighted, and the two RER sample points marked |
 | Bottom-right | **LSF** | Line Spread Function normalized to its maximum |
 
-#### 5.1.2 Outputs export option
+#### 6.1.2 Outputs export option
 
 If an **Analysis output directory** is provided in QGIS, three files are written to that directory after each successful run:
 
@@ -363,7 +370,7 @@ If an **Analysis output directory** is provided in QGIS, three files are written
 
 **1. Synthetic view** — `figure_<alg_id>_<datetime>.png`
 
-The synthetic view described in [5.1.1](#511-synthetic-view) is saved as a PNG file.
+The synthetic view described in [6.1.1](#611-synthetic-view) is saved as a PNG file.
 
 ---
 
@@ -414,7 +421,7 @@ A cumulative GeoPackage that accumulates one polygon feature per analysis run. E
 
 If `report.gpkg` already exists in the output directory, new results are appended as additional features. If the existing file has incompatible fields, an error is reported and the feature is not written.
 
-### 5.2 SNR Processing Report
+### 6.2 SNR Processing Report
 
 The SNR Estimator produces a single multi-panel figure with four graphs:
 
@@ -427,11 +434,11 @@ The SNR Estimator produces a single multi-panel figure with four graphs:
 
 ---
 
-## 6. Parameters Reference
+## 7. Parameters Reference
 
 Both the QGIS Processing Toolbox interface and the command-line interface share the same underlying parameters.
 
-### 6.1 Common Parameters
+### 7.1 Common Parameters
 
 These parameters apply to both the MTF Estimator and the SNR Estimator, regardless of the interface used.
 
@@ -441,7 +448,7 @@ These parameters apply to both the MTF Estimator and the SNR Estimator, regardle
 | `Band number` | Band to process (1-based index). Default: 1 |
 | `Area of interest` | Polygon vector layer (shapefile) defining the ROI |
 
-### 6.2 MTF Estimator — Specific Parameters
+### 7.2 MTF Estimator — Specific Parameters
 
 | Parameter | Type | Default | Description |
 |---|---|---|---|
@@ -451,7 +458,7 @@ These parameters apply to both the MTF Estimator and the SNR Estimator, regardle
 | `edge_direction` | Enum | AL | Orientation of the edge: `AL` (Along Track) or `CT` (Across Track) |
 | `esf_model` | Enum | sigmoid | Analytical model for ESF fitting (Parametric only): `sigmoid`, `esf_tanh`, `esf_fermi`, `esf_gauss_exp_param`, `esf_erf`; or non-parametric: `esf_loess`, `esf_polynomial` |
 
-### 6.3 SNR Estimator — Specific Parameters
+### 7.3 SNR Estimator — Specific Parameters
 
 | Parameter | Required | Description |
 |---|---|---|
@@ -466,17 +473,17 @@ These parameters apply to both the MTF Estimator and the SNR Estimator, regardle
 
 ---
 
-## 7. Usage — Command Line
+## 8. Usage — Command Line
 
 Scripts are available in `image_quality_toolset/scripts/` to run algorithms from the command line using INI configuration files.
 
-### 7.1 Prerequisites
+### 8.1 Prerequisites
 
 - Git installed
 - Conda (Miniconda or Anaconda) installed
 - Development environment set up (see [Section 3.4](#34-development-environment-setup))
 
-### 7.2 Running a Script
+### 8.2 Running a Script
 
 From the root of the cloned repository, with the `mtf` conda environment active:
 
@@ -492,7 +499,7 @@ python image_quality_toolset/scripts/mtf_computer.py --config_file image_quality
 
 Results are displayed as Matplotlib figures. If debug is enabled, figures are also saved to the directory specified in `[debug] dir`.
 
-### 7.3 Configuration File Format
+### 8.3 Configuration File Format
 
 The script takes an INI configuration file as input. The file is organised in three sections: `[input]`, `[parameters]` and `[debug]`.
 
@@ -522,7 +529,7 @@ The script takes an INI configuration file as input. The file is organised in th
 | `enabled` | no | Enable debug output (`true` / `false`). Default: `false` |
 | `dir` | no | Absolute path to the directory where output figures are saved |
 
-### 7.4 Configuration Examples
+### 8.4 Configuration Examples
 
 Paths in configuration files support environment variable expansion (e.g. `$IMAGE_QUALITY_TOOL_HOME`). Replace `<path/to/image.tif>`, `<path/to/roi.shp>` and `<path/to/output>` with your actual paths:
 
@@ -547,7 +554,7 @@ enabled = true
 dir = <path/to/output>
 ```
 
-### 7.5 Available Configuration Files
+### 8.5 Available Configuration Files
 
 Pre-configured configuration files are available in `test/data/config_files/`:
 
@@ -560,7 +567,7 @@ Pre-configured configuration files are available in `test/data/config_files/`:
 
 ---
 
-## 8. Data
+## 9. Data
 
 The algorithms need an image and a ROI (Region of Interest) to work. Example datasets are available in the `test/data/` directory:
 
@@ -577,7 +584,7 @@ Note that shapefiles consist of multiple files (`.shp`, `.dbf`, `.shx`, `.prj`, 
 
 ---
 
-## 9. License
+## 10. License
 
 This project uses a dual-license model:
 
@@ -609,7 +616,7 @@ All remaining Python files, including the plugin entry point, QGIS algorithm wra
 
 ---
 
-## 10. Roadmap
+## 11. Roadmap
 
 The final version of the plugin will include:
 
@@ -620,7 +627,7 @@ The final version of the plugin will include:
 
 ---
 
-## 11. References
+## 12. References
 
 1. <a id="ref-1"></a>ESA ESAP [VHR HR and MR Optical missions webpage](https://earth.esa.int/eogateway/activities/edap/vhr-hr-mr-optical-missions), including access to Technical notes.
 2. <a id="ref-2"></a>JACIE Best Practices for Remote Sensing System Evaluation and Reporting, Open-File Report 2024-1023.
