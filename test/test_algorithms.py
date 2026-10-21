@@ -57,7 +57,7 @@ CASES = {
     # raw image (no CRS, pixel coordinates) and a ROI with no CRS either (no .prj), so that QGIS
     # draws them on top of each other: the window of config_files/pan_target_MTF.ini
     "knife_edge_target2_nocrs": ("MTFEstimatorKnifeEdge",
-        "target2/S100199aI_002_2_PAN_L0R_mtf_target.tif", "target2/shapefile/roi_pan_edge.shp",
+        "target2/S100199aI_002_2_PAN_L0R_mtf_target.tif", "target2/shapefile/mtf_mire.shp",
         dict(SCALE=0.01, OFFSET=1, PX_MARGIN=0, EDGE_DIRECTION=0, ESF_MODEL=0, SAMPLING=0.2),
         {"MTF_NYQ": 0.011, "MTF50": 0.153}),
     "snr_target4": ("SNREstimator",

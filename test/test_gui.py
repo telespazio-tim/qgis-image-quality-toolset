@@ -66,7 +66,7 @@ def check_two_runs_in_the_dock(p):
     sys.excepthook = lambda *exc: errors.append(exc)  # exceptions raised in Qt's event() land here
     data = os.path.join(HERE, "data", "target2")
     params = dict(RASTER=os.path.join(data, "S100199aI_002_2_PAN_L0R_mtf_target.tif"), BAND=1,
-                  ROI=os.path.join(data, "shapefile", "roi_pan_edge.shp"), SCALE=0.01, OFFSET=1, PX_MARGIN=0,
+                  ROI=os.path.join(data, "shapefile", "mtf_mire.shp"), SCALE=0.01, OFFSET=1, PX_MARGIN=0,
                   EDGE_DIRECTION=0, ESF_MODEL=0, SAMPLING=0.2)
     for _ in range(2):
         alg = p.provider.algorithm("MTFEstimatorKnifeEdge").create()
