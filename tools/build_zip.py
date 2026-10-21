@@ -18,6 +18,9 @@ import sys
 import tempfile
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
+# Shipped in the plugin folder: LICENSE (GPL v3, license_file of metadata.txt, required by
+# plugins.qgis.org) and LICENSE-APACHE (Apache 2.0, the core algorithms)
+LICENSE_FILES = ("LICENSE", "LICENSE-APACHE")
 
 
 def packs(out_dir, platform, pythons, tags):
@@ -45,6 +48,8 @@ def plugin(out_zip, packs_dir):
     shutil.rmtree(build, ignore_errors=True)
     dest = build / "image_quality_toolset"
     shutil.copytree(ROOT / "image_quality_toolset", dest, ignore=shutil.ignore_patterns("__pycache__", "*.pyc", "dependencies"))
+    for name in LICENSE_FILES:
+        shutil.copy(ROOT / name, dest / name)
     lines = [f"{hashlib.sha256(p.read_bytes()).hexdigest()}  {p.name}" for p in sorted(pathlib.Path(packs_dir).glob("deps-*.zip"))]
     assert lines, f"no deps-*.zip in {packs_dir}"
     (dest / "deps-sha256.txt").write_text("\n".join(lines) + "\n")
