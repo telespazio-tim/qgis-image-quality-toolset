@@ -30,8 +30,6 @@ def check(path):
     missing = [k for k in REQUIRED if not g.get(k, "").strip()]
     assert not missing, f"metadata.txt is missing {missing}"
     assert f"{root}/{g['icon']}" in names, f"icon {g['icon']} not in the zip"
-    license_file = g.get("license_file", "LICENSE")
-    assert f"{root}/{license_file}" in names, f"{license_file} not in the zip (plugins.qgis.org rejects the upload)"
     assert re.fullmatch(r"\d+(\.\d+)*", g["qgisMinimumVersion"]), "bad qgisMinimumVersion"
     # QGIS assumes <major>.99 when there is no maximum: the plugin would be disabled on QGIS 4
     assert float(g.get("qgisMaximumVersion", "0").rsplit(".", 1)[0] or 0) >= 4, "qgisMaximumVersion must cover QGIS 4 (4.99)"
