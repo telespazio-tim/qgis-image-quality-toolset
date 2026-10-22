@@ -42,6 +42,8 @@ from qgis.core import (
 import functools
 import traceback
 
+import matplotlib.pyplot as plt
+
 import image_quality_toolset
 from image_quality_toolset.result_dockwidget import PlotWindow, MTFEvent
 from ..tools.raster_tools import roi_extraction
@@ -247,13 +249,15 @@ class BaseMTFEstimatorAlgorithm(QgsProcessingAlgorithm):
             for idx, fig in enumerate(figures):
                 suffix = "" if idx == 0 else str(idx + 1)
                 fig_filename = f"figure{suffix}_{alg_id}_{current_datetime_str}.png"
+                fig_filepath = outputDir.filePath( fig_filename )
                 try:
-                    fig_filepath = outputDir.filePath( fig_filename )
                     fig.savefig( fig_filepath )
                     if idx == 0:
                         figure_filename = fig_filename
                 except Exception as e:
                     feedback.reportError(self.tr(f"Error while saving result image '{fig_filepath}' : {e}"))
+                finally:
+                    plt.close(fig)  # saved copy only: the results dock builds its own figure
             
             fields, values = self.fields_and_values( current_datetime, figure_filename, parameters, context, feedback, mtf=mtf )
             reportFilePath = outputDir.filePath( self.REPORT_FILENAME )
