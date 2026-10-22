@@ -14,6 +14,7 @@ License: GPL-3.0
 
 import importlib
 import importlib.util
+import ipaddress
 import logging
 import hashlib
 import os
@@ -21,6 +22,7 @@ import platform
 import re
 import sys
 import tempfile
+import urllib.parse
 import urllib.request
 import zipfile
 from typing import Dict, List, Optional, Tuple, Callable, Any
@@ -43,6 +45,22 @@ def platform_id() -> str:
 
 def pack_name() -> str:
     return f"deps-{platform_id()}-cp{sys.version_info.major}{sys.version_info.minor}.zip"
+
+
+def _is_loopback(host: Optional[str]) -> bool:
+    """True for localhost / 127.0.0.0/8 / ::1, the only hosts allowed over plain http."""
+    if host == "localhost":
+        return True
+    try:
+        return ipaddress.ip_address(host or "").is_loopback
+    except ValueError:
+        return False
+
+
+def _download_url_allowed(url: str) -> bool:
+    """Dependency bundles are fetched over https, except from a local test/mirror server on loopback."""
+    parsed = urllib.parse.urlparse(url)
+    return parsed.scheme == "https" or (parsed.scheme == "http" and _is_loopback(parsed.hostname))
 
 
 def install_wheel_pack(plugin_dir: str, progress_callback: Optional[Callable[[str], None]] = None) -> bool:
@@ -70,6 +88,13 @@ def install_wheel_pack(plugin_dir: str, progress_callback: Optional[Callable[[st
     with open(os.path.join(plugin_dir, "metadata.txt"), encoding="utf-8") as f:
         version = next(l.split("=", 1)[1].strip() for l in f if l.startswith("version="))
     url = os.environ.get("IQT_PACK_BASE_URL", PACK_BASE_URL.format(version=version)) + "/" + name
+    # https only: a plain http URL could be tampered with in transit (the sha256 is fetched
+    # from the same place), and a file:/ URL would read local files. Plain http stays
+    # accepted on loopback, where the CI and the tests serve the wheel packs locally.
+    if not _download_url_allowed(url):
+        say(f"✗ Refusing to download {name} from {url}: only https URLs are allowed "
+            "(plain http is accepted for loopback addresses only).")
+        return False
 
     local = os.path.join(plugin_dir, name)  # offline install: the user drops the bundle here
     downloaded = None
@@ -79,7 +104,8 @@ def install_wheel_pack(plugin_dir: str, progress_callback: Optional[Callable[[st
         else:
             say(f"Downloading dependency bundle {name}...")
             fd, downloaded = tempfile.mkstemp(suffix=".zip", dir=plugin_dir)
-            with os.fdopen(fd, "wb") as out, urllib.request.urlopen(url, timeout=60) as r:
+            # Same handling as urlopen (proxies, redirects), with the scheme validated above.
+            with os.fdopen(fd, "wb") as out, urllib.request.build_opener().open(url, timeout=60) as r:
                 out.write(r.read())
             local = downloaded
         with open(local, "rb") as f:
@@ -221,14 +247,14 @@ class DependencyChecker:
         if metadata:
             try:
                 return metadata.version(info.package)
-            except Exception:
-                pass
+            except Exception as e:
+                logger.debug("No metadata version for package %s: %s", info.package, e)
 
             # 2. Try metadata (import name)
             try:
                 return metadata.version(info.import_name)
-            except Exception:
-                pass
+            except Exception as e:
+                logger.debug("No metadata version for module %s: %s", info.import_name, e)
 
         # 3. Fallback: try to import and look for version attributes
         try:
@@ -248,8 +274,9 @@ class DependencyChecker:
                     if isinstance(version, tuple):
                         return ".".join(str(v) for v in version)
                     return str(version)
-        except Exception:
-            pass
+        except Exception as e:
+            # No version attribute: the dependency is reported as unknown.
+            logger.debug("Could not read the version of %s: %s", info.import_name, e)
 
         return None
 

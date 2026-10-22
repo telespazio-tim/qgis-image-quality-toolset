@@ -651,7 +651,28 @@ All remaining Python files, including the plugin entry point, QGIS algorithm wra
 
 ---
 
-## 12. References
+## 12. Development
+
+### 12.1 Code Quality Checks
+
+The code shipped in the plugin is audited with [Bandit](https://bandit.readthedocs.io/). Install the git hooks once per clone (in the `mtf` environment or in any environment with `pre-commit`):
+
+```bash
+pip install pre-commit
+pre-commit install
+```
+
+Bandit then runs on every commit. To check the whole repository at once:
+
+```bash
+pre-commit run --all-files
+```
+
+The hook and the `lint` job of the CI audit `image_quality_toolset/` only, with the latest stable Bandit: the test scripts rely on `assert`, which is not a security concern. Silencing findings (`# nosec`, `skips`) is not used: findings are fixed in the code.
+
+---
+
+## 13. References
 
 1. <a id="ref-1"></a>ESA EDAP [VHR HR and MR Optical missions webpage](https://earth.esa.int/eogateway/activities/edap/vhr-hr-mr-optical-missions), including access to Technical notes.
 2. <a id="ref-2"></a>JACIE Best Practices for Remote Sensing System Evaluation and Reporting, Open-File Report 2024-1023.

@@ -8,11 +8,19 @@ on:
     branches: [develop]
 
 jobs:
-  # Fast checks that need no QGIS: Qt6-incompatible enums, and the layout/metadata of the zip.
+  # Fast checks that need no QGIS: bandit security audit, Qt6-incompatible enums, and the
+  # layout/metadata of the zip.
   lint:
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Bandit security audit
+        run: |
+          python -m pip install bandit
+          python -m bandit -r image_quality_toolset
       - run: python3 test/check_qt6_enums.py
       - run: make build && python3 test/check_zip.py dist/*.zip
 
