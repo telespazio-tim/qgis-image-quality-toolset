@@ -28,6 +28,7 @@ from qgis.core import (
     QgsFields,
     QgsMultiPolygon,
     QgsProcessingAlgorithm,
+    QgsProcessingException,
     QgsProcessingParameterBand,
     QgsProcessingParameterFile,
     QgsProcessingParameterNumber,
@@ -38,13 +39,36 @@ from qgis.core import (
     QgsVectorLayer,
     )
 
+import functools
+import traceback
+
 import image_quality_toolset
 from image_quality_toolset.result_dockwidget import PlotWindow, MTFEvent
 from ..tools.raster_tools import roi_extraction
 
 
+def _safe_process(process):
+    """Turn any error of processAlgorithm into a QgsProcessingException (message in the dialog,
+    traceback in the log) instead of a bare Python traceback."""
+    @functools.wraps(process)
+    def wrapper(self, parameters, context, feedback):
+        try:
+            return process(self, parameters, context, feedback)
+        except QgsProcessingException:
+            raise
+        except Exception as e:
+            feedback.pushDebugInfo(traceback.format_exc())
+            raise QgsProcessingException(f"{type(e).__name__}: {e}") from e
+    return wrapper
+
+
 class BaseMTFEstimatorAlgorithm(QgsProcessingAlgorithm):
     """Base class for MTF estimator algorithms."""
+
+    def __init_subclass__(cls, **kwargs):
+        super().__init_subclass__(**kwargs)
+        if "processAlgorithm" in cls.__dict__:  # each algorithm overriding it is protected
+            cls.processAlgorithm = _safe_process(cls.__dict__["processAlgorithm"])
 
     RASTER = 'RASTER'
     BAND = 'BAND'
@@ -101,6 +125,7 @@ class BaseMTFEstimatorAlgorithm(QgsProcessingAlgorithm):
                                                       optional=True, defaultValue=QSettings().value('', None)))
 
 
+    @_safe_process
     def processAlgorithm(self, parameters, context, feedback):
         raster_layer = self.parameterAsRasterLayer(parameters, self.RASTER, context)
         band_n = self.parameterAsInt(parameters, self.BAND, context)

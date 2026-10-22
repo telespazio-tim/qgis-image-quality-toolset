@@ -18,6 +18,7 @@
 import numpy as np
 import osgeo
 from osgeo import gdal, ogr, osr
+from qgis.core import QgsProcessingException
 
 
 def compute_raster_extent(memlayer, gt, xsize, ysize, pxoffset=5):
@@ -118,8 +119,17 @@ def roi_extraction(raster_layer, band_n, vlayer, context, feedback):
     """
     from qgis.core import QgsProcessingFeatureSource
 
+    if raster_layer is None:
+        raise QgsProcessingException("Invalid input raster: the layer could not be loaded.")
+    if vlayer is None:
+        raise QgsProcessingException("Invalid ROI: the vector layer could not be loaded.")
     featureSource = QgsProcessingFeatureSource(vlayer, context)
     gdal_layer = gdal.Open(raster_layer.source(), gdal.GA_ReadOnly)
+    if gdal_layer is None:
+        raise QgsProcessingException(f"GDAL cannot open the raster: {raster_layer.source()}")
+    if not 1 <= band_n <= gdal_layer.RasterCount:
+        raise QgsProcessingException(
+            f"Band {band_n} does not exist: the raster has {gdal_layer.RasterCount} band(s).")
     gt = list(gdal_layer.GetGeoTransform())
     xsize = gdal_layer.RasterXSize
     ysize = gdal_layer.RasterYSize
@@ -180,6 +190,8 @@ def roi_extraction(raster_layer, band_n, vlayer, context, feedback):
         featureDefn = memlayer.GetLayerDefn()
         memfeat = ogr.Feature(featureDefn)
         geom = qgs_feature.geometry()
+        if geom.isNull() or geom.isEmpty():
+            continue
         feedback.pushInfo(geom.asWkt())
         geom = geom.asWkb()
         geom = ogr.CreateGeometryFromWkb(geom)
@@ -200,10 +212,18 @@ def roi_extraction(raster_layer, band_n, vlayer, context, feedback):
         memfeat.SetGeometry(geom)
         memlayer.CreateFeature(memfeat)
 
+    if memlayer.GetFeatureCount() == 0:
+        raise QgsProcessingException("The ROI layer has no feature with a geometry.")
+
     # Compute extent in raster coordinates
     col_min, row_min, sub_xsize, sub_ysize, sub_gt = compute_raster_extent(
         memlayer, gt, xsize, ysize
     )
+
+    if sub_xsize <= 0 or sub_ysize <= 0:
+        raise QgsProcessingException(
+            "The ROI does not overlap the raster. Check that the ROI covers the image "
+            "(and that its CRS is defined correctly).")
 
     memraster_drv = gdal.GetDriverByName("MEM")
     memraster = memraster_drv.Create("", sub_xsize, sub_ysize, 1, gdal.GDT_Float64)
@@ -216,6 +236,8 @@ def roi_extraction(raster_layer, band_n, vlayer, context, feedback):
     mask = memband.ReadAsArray(0, 0, sub_xsize, sub_ysize)
     data = band.ReadAsArray(col_min, row_min, sub_xsize, sub_ysize).astype(np.float64)
     data[mask == 0] = np.nan
+    if np.all(np.isnan(data)):
+        raise QgsProcessingException("The ROI contains no pixel of the raster.")
     memband.WriteArray(data)
     mask = None
 

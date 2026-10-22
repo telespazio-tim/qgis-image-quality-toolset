@@ -642,6 +642,8 @@ def knife_edge1(x, lsf1, passpline):
 
     # Find MTF @ Nyquist frequency:
     s2 = np.where(f > 0.5)
+    if s2[0].size == 0 or not np.any(f <= 0.5):
+        raise ValueError("Cannot find the MTF at Nyquist: the frequency axis is too short (ROI too small or no usable edge).")
     i_2 = s2[0][0]
     s1 = np.where(f <= 0.5)
     i_1 = s1[0][-1:][0]  # used for python index
