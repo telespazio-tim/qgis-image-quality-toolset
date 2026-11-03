@@ -13,7 +13,7 @@ about=The Image Quality Toolset is a QGIS plugin developed in the context of the
     Each method requires an input raster and a polygon ROI (shapefile). Radiometric scale and offset parameters allow conversion from raw DN to radiance. Results are accumulated across runs in a GeoPackage report, one feature per analysis, with full metadata and geometry.
 
     The plugin uses a dual-license model: the QGIS integration layer is released under GPL v3; the core signal-processing algorithms (MTF, SNR, ESF models, variogram) are released under Apache 2.0.
-version=1.1
+version=1.2
 qgisMinimumVersion=3.38
 qgisMaximumVersion=4.99
 author=Telespazio TIM
@@ -31,6 +31,11 @@ hasProcessingProvider=yes
 experimental=False
 deprecated=False
 changelog=
+    ImageQualityToolset 1.2
+        - Fixed the Bandit security findings that led to the withdrawal of 1.1: the dependency bundle is now downloaded over https only (plain http is accepted on loopback, for the tests), and failed version lookups are logged instead of being silently ignored.
+        - Bandit security audit added to the pre-commit hooks and to the CI.
+        - Clearer error messages instead of tracebacks on an unusable ROI or input, and on a figure that cannot be saved.
+        - Otherwise identical to 1.1.
     ImageQualityToolset 1.1
         - QGIS 4 / Qt 6 support (also QGIS 3.38+).
         - Dependencies (loess, scikit-image) now come from a prebuilt bundle downloaded at first run and checked against a checksum, instead of pip. Status and errors are shown in the results panel; offline install is possible by dropping the bundle in the plugin folder.
