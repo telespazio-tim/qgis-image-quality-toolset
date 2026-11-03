@@ -402,6 +402,13 @@ class MtfKnifeEdge(Mtf):  # M Sample origin for statistics
         self.estimated_angle_refined = angle
         self.console(" Rotation angle {:0.2f} °".format(self.angle))
         self.console(" Estimate angle {:0.2f} °".format(self.estimated_angle_refined))
+        if self.input_angle is not None:
+            # edge angles are equivalent modulo 90°: compare on that circle
+            gap = abs((self.input_angle - angle + 45.0) % 90.0 - 45.0)
+            if gap > 5.0:
+                self.console(
+                    " WARNING: the estimated edge angle differs by {:0.1f} ° from the input angle: "
+                    "check the input angle, the edge direction and that the ROI contains a clear edge.".format(gap))
 
     def get_non_eq_space_esf(
         self, window_ovr_image_parameter):
@@ -691,6 +698,8 @@ class MtfKnifeEdge(Mtf):  # M Sample origin for statistics
         x = [it[0] for it in x_p]
         y = [it[1] for it in x_p]
 
+        if not np.any(np.array(y) < 0.05):
+            raise ValueError("Cannot compute the PSF extent: the edge profile is degenerate (no usable edge in the ROI).")
         index = np.max(np.where(np.array(y) < 0.05))
         u = np.where(y_c > x[index])
         min_v = u[0][0]
@@ -707,6 +716,14 @@ class MtfKnifeEdge(Mtf):  # M Sample origin for statistics
         x1 = self.x
         R = self.nuage
         passpline = self.sampling
+
+        # A ROI without a usable edge gives a degenerate edge profile (few bins, NaN, flat):
+        # fail with a clear message instead of an IndexError / LinAlgError in the ESF fit.
+        if len(x1) < 10 or not np.all(np.isfinite(R)) or np.ptp(R) == 0:
+            raise ValueError(
+                "No usable edge found in the ROI (edge profile has {} points, "
+                "estimated angle too far from the input angle?). Draw a larger ROI "
+                "centred on a straight, high-contrast edge.".format(len(x1)))
 
         if self.esf_model in self.ESF_MODEL_PARAMETRIC_FUNCTIONS:
             self.esf_func = self.ESF_MODEL_PARAMETRIC_FUNCTIONS[self.esf_model]
@@ -922,6 +939,8 @@ class MtfKnifeEdge(Mtf):  # M Sample origin for statistics
         # Align Cut LSF with ESF
         st = np.where(self.x_esf == self.x_lsf[0])
         end = np.where(self.x_esf == self.x_lsf[-1:])
+        if st[0].size == 0 or end[0].size == 0:
+            raise ValueError("Cannot align the LSF with the ESF: no usable edge in the ROI.")
         self.x_esf = self.x_esf[st[0][0] : end[0][0] + 1]
         self.y_esf = self.y_esf[st[0][0] : end[0][0] + 1]
 
@@ -973,6 +992,8 @@ class MtfKnifeEdge(Mtf):  # M Sample origin for statistics
         # As non eq space value can be missing, look for into window
         m = [self.x > a3 - 2][0] & [self.x < a3 + 2][0]
         # Indice in the orginal ESF
+        if not np.any(m):
+            raise ValueError("Cannot locate the edge inflection point: no usable edge in the ROI.")
         infl = self.x[m][0]
         indice = (np.where(self.x == infl))[0][0]
 

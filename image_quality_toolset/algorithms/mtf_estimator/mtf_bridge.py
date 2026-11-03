@@ -542,6 +542,8 @@ class MtfBridge(Mtf):
         x = [it[0] for it in x_p]
         y = [it[1] for it in x_p]
 
+        if not np.any(np.array(y) < 0.05):
+            raise ValueError("Cannot compute the PSF extent: the edge profile is degenerate (no usable edge in the ROI).")
         index = np.max(np.where(np.array(y) < 0.05))
         u = np.where(y_c > x[index])
         min_v = u[0][0]

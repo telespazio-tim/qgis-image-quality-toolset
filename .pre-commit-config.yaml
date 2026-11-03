@@ -1,0 +1,19 @@
+# Run `pre-commit install` once per clone, then the hooks run on every commit.
+# `pre-commit run --all-files` checks the whole repository.
+repos:
+  # Local hook rather than the PyCQA repo: pre-commit needs a fixed `rev` there, while
+  # this installs the latest stable bandit from PyPI. The hook environment is cached;
+  # `pre-commit clean` recreates it with the bandit release of that day.
+  - repo: local
+    hooks:
+      - id: bandit
+        name: bandit
+        entry: bandit
+        language: python
+        additional_dependencies: ["bandit"]
+        types: [python]
+        require_serial: true
+        # Only the code shipped in the plugin zip is audited; the test scripts are
+        # built on assert. Directory scope, not a skip list: findings cannot be
+        # silenced with # nosec or a `skips` option anywhere in this repository.
+        files: ^image_quality_toolset/

@@ -136,7 +136,11 @@ def sigmoide(x, R, passpline):
     x_cut = x1[bmin:bmax]
     y_cut = y[bmin:bmax]
 
-    i = int(np.where(x_cut == a3)[0][0])
+    hit = np.where(x_cut == a3)[0]
+    if hit.size == 0:
+        raise ValueError("No usable edge found in the ROI: the edge inflection point is on the "
+                         "border of the edge profile. Draw a larger ROI centred on the edge.")
+    i = int(hit[0])
     nb_measurement_left = len(x_cut[bmin: i])
     nb_measurement_right = len(x_cut[i: bmax])
 
