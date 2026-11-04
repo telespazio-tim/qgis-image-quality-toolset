@@ -1,11 +1,59 @@
-# Run `pre-commit install` once per clone, then the hooks run on every commit.
-# `pre-commit run --all-files` checks the whole repository.
+# Run `pre-commit install` once per clone: `default_install_hook_types` installs both the
+# pre-commit (fast) and pre-push (slow) hooks. `pre-commit run --all-files` checks the
+# whole repository with the fast hooks; add `--hook-stage pre-push --all-files` for the
+# slow set.
+default_install_hook_types: [pre-commit, pre-push]
+default_stages: [pre-commit]
+
 repos:
-  # Local hook rather than the PyCQA repo: pre-commit needs a fixed `rev` there, while
-  # this installs the latest stable bandit from PyPI. The hook environment is cached;
-  # `pre-commit clean` recreates it with the bandit release of that day.
+  # Fast, file-level checks: whitespace, configuration syntax, conflict markers, debug
+  # statements, secrets, accidental executable bits and accidental giant files.
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v6.0.0
+    hooks:
+      - id: trailing-whitespace
+        stages: [pre-commit]
+      - id: end-of-file-fixer
+        stages: [pre-commit]
+      - id: check-merge-conflict
+        stages: [pre-commit]
+      - id: check-case-conflict
+        stages: [pre-commit]
+      - id: check-ast
+        stages: [pre-commit]
+      - id: check-yaml
+        stages: [pre-commit]
+      - id: check-json
+        stages: [pre-commit]
+      - id: check-toml
+        stages: [pre-commit]
+      - id: debug-statements
+        stages: [pre-commit]
+      - id: detect-private-key
+        stages: [pre-commit]
+      # Only newly added files are checked; the existing 59 MB test fixture is already
+      # tracked. 10 MB leaves room for normal test data while catching accidental blobs.
+      - id: check-added-large-files
+        args: [--maxkb=10240]
+        stages: [pre-commit]
+      # File permissions: an executable file must be a script (it must start with #!),
+      # and a script must be executable. Historical images, test fixtures and algorithm
+      # sources were committed with the executable bit set, so these hooks guard against
+      # a regression. Fix with `chmod -x <file>` (Windows: `git add --chmod=-x <file>`).
+      - id: check-executables-have-shebangs
+        stages: [pre-commit]
+      - id: check-shebang-scripts-are-executable
+        stages: [pre-commit]
+
+  # Local hooks rather than the PyCQA repos: pre-commit needs a fixed `rev` there, while
+  # this installs the latest stable tool from PyPI. The hook environments are cached;
+  # `pre-commit clean` recreates them with the releases of that day.
   - repo: local
     hooks:
+      # Fast enough for every commit, and only the code shipped in the plugin zip is
+      # audited; the test scripts are built on assert. Directory scope, not a skip list:
+      # findings cannot be silenced with # nosec or a `skips` option anywhere in this
+      # repository.
       - id: bandit
         name: bandit
         entry: bandit
@@ -13,7 +61,19 @@ repos:
         additional_dependencies: ["bandit"]
         types: [python]
         require_serial: true
-        # Only the code shipped in the plugin zip is audited; the test scripts are
-        # built on assert. Directory scope, not a skip list: findings cannot be
-        # silenced with # nosec or a `skips` option anywhere in this repository.
+        stages: [pre-commit]
         files: ^image_quality_toolset/
+
+      # Slow check: the whole repository is linted before a push, not only the files
+      # touched by the commit. `.flake8` selects the checks that catch real errors
+      # (syntax, undefined names, broken comparisons) and leaves the historical
+      # formatting drift out of the gate; see the README for the full report.
+      - id: flake8
+        name: flake8 (full repository)
+        entry: flake8 .
+        language: python
+        additional_dependencies: ["flake8"]
+        stages: [pre-push]
+        pass_filenames: false
+        always_run: true
+        require_serial: true

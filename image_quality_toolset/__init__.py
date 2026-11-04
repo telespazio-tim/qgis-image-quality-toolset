@@ -117,7 +117,7 @@ class ImageQualityToolSet:
         print("=" * 80)
         print("ImageQualityToolSet: _register_provider() called")
         print("=" * 80)
-        
+
         if not self.provider:
             print("Creating new provider...")
             self.provider = ImageQualityToolSetProvider(self.dock_widget)
@@ -175,4 +175,3 @@ class ImageQualityToolSetProvider(QgsProcessingProvider):
 
     def icon(self) -> QIcon:
         return self._icon
-

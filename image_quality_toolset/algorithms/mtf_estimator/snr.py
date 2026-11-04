@@ -107,19 +107,19 @@ class SNR :
         # Uniform filtering of the input image (NaN-aware):
         mask_valid = np.isfinite(self.im).astype(np.float64)
         im_filled = np.nan_to_num(self.im, nan=0.0)
-        
+
         # Count of valid pixels in window
         count = ndimage.uniform_filter(mask_valid, size=self.window_size) * (self.window_size**2)
         # Sum of valid pixels in window
         sum_im = ndimage.uniform_filter(im_filled, size=self.window_size) * (self.window_size**2)
-        
+
         # Calculate local mean
         self.smooth_image = np.divide(sum_im, count, out=np.full_like(self.im, np.nan), where=count > 0)
-        
+
         # Local variance calculation: E[X^2] - (E[X])^2
         sum_im_sq = ndimage.uniform_filter(im_filled**2, size=self.window_size) * (self.window_size**2)
         mean_sq = np.divide(sum_im_sq, count, out=np.full_like(self.im, np.nan), where=count > 0)
-        
+
         self.std = np.power(np.maximum(0, mean_sq - self.smooth_image**2), 0.5)
         std = self.std
         # Local SNR per pixel
@@ -274,7 +274,7 @@ class SNR :
             var_signal = np.nanvar(self.im)
             # Average of binned variances as noise estimate
             var_noise = np.mean(self.bin_std * self.bin_std)
-            
+
             if var_noise > 0 and np.isfinite(var_signal) and np.isfinite(var_noise):
                 snr_2 = np.power(max(0, (var_signal / var_noise) - 1), 0.5)
             else:
@@ -389,7 +389,7 @@ class SNR :
 
     def getRoi(self):
         return self.roi
-    
+
     def console(self, message):
         print(message)
         if self.feedback:
@@ -398,13 +398,13 @@ class SNR :
     def isValid(self):
         """Return True if computed SNR/MTF is valid."""
         return self._isValid
-    
+
     def compute_peak_snr(self, precision_v=None):
         """
         Compute SNR using the peak-histogram method (histogram peak of local SNR).
 
         Args:
-            precision_v: Precision of SNR calculation (bin width). 
+            precision_v: Precision of SNR calculation (bin width).
                          Defaults to self.snr_precision if None.
         """
         if precision_v is None:

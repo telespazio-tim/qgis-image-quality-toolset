@@ -656,20 +656,44 @@ All remaining Python files, including the plugin entry point, QGIS algorithm wra
 
 ### 12.1 Code Quality Checks
 
-The code shipped in the plugin is audited with [Bandit](https://bandit.readthedocs.io/). Install the git hooks once per clone (in the `mtf` environment or in any environment with `pre-commit`):
+The code is checked with the [pre-commit](https://pre-commit.com/) framework. Install the hooks once per clone (in the `mtf` environment or in any environment with `pre-commit`):
 
 ```bash
 pip install pre-commit
-pre-commit install
+pre-commit install   # or: make hooks
 ```
 
-Bandit then runs on every commit. To check the whole repository at once:
+`default_install_hook_types` in `.pre-commit-config.yaml` installs both hook stages:
+
+- **pre-commit (fast)**, on every commit: trailing whitespace, end-of-file, YAML/JSON/TOML syntax, merge-conflict markers, case conflicts, Python AST, debug statements, private keys, added large files, executable permissions (see below), and [Bandit](https://bandit.readthedocs.io/).
+- **pre-push (slow)**, before a push: a full-repository Flake8 run.
+
+Run the fast set on the whole repository with:
 
 ```bash
 pre-commit run --all-files
 ```
 
-The hook and the `lint` job of the CI audit `image_quality_toolset/` only, with the latest stable Bandit: the test scripts rely on `assert`, which is not a security concern. Silencing findings (`# nosec`, `skips`) is not used: findings are fixed in the code.
+Run the slow set with:
+
+```bash
+pre-commit run --hook-stage pre-push --all-files
+```
+
+**Flake8.** `.flake8` limits the gate to errors that change behaviour or hide bugs (`E9`, `F63`, `F7`, `F82`), because the historical algorithm code predates the style checker and still has formatting drift. To see the complete report, style included:
+
+```bash
+flake8 --select=E,W,F
+```
+
+**File permissions.** Two hooks from `pre-commit/pre-commit-hooks` keep the git executable bit honest:
+
+- `check-executables-have-shebangs` — a file marked executable must start with `#!`;
+- `check-shebang-scripts-are-executable` — a file with a shebang must be executable.
+
+If a file is wrongly executable, run `chmod -x <file>` (on Windows, `git add --chmod=-x <file>`). The historical executable bits on the documentation images, test fixtures and algorithm sources have been reset to `644`; the hooks prevent them from coming back.
+
+The Bandit hook and the `lint` job of the CI audit `image_quality_toolset/` only, with the latest stable Bandit: the test scripts rely on `assert`, which is not a security concern. Silencing findings (`# nosec`, `skips`) is not used: findings are fixed in the code.
 
 ---
 

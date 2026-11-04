@@ -26,17 +26,17 @@ from abc import ABC, abstractmethod
 
 
 class Mtf(ABC):
-    
+
     """
     Abstract base class for Modulation Transfer Function (MTF) computation.
-    
+
     This class defines the interface that all MTF computation classes must implement.
-    It provides methods to compute MTF (Modulation Transfer Function), LSF (Line 
+    It provides methods to compute MTF (Modulation Transfer Function), LSF (Line
     Spread Function), and ESF (Edge Spread Function), along with unified report generation.
-    
-    The class is designed to work both within QGIS processing framework and as a 
+
+    The class is designed to work both within QGIS processing framework and as a
     standalone tool for testing purposes, providing flexibility in usage contexts.
-    
+
     Attributes
     ----------
     raster : raster layer
@@ -46,30 +46,30 @@ class Mtf(ABC):
         Feedback object for progress reporting and logging in QGIS interface.
         Should be set to MockFeedback() when performing tests outside QGIS environment.
     parameters : dictionary
-        A dictionary containing additional parameters inherent to subclasses 
-    
+        A dictionary containing additional parameters inherent to subclasses
+
     Notes
     -----
-    - This abstract class provides a common template for different MTF computation 
+    - This abstract class provides a common template for different MTF computation
       algorithms implemented in subclasses.
     """
-    
-    def __init__(self, roi, raster : 'raster', feedback : QgsProcessingFeedback):
+
+    def __init__(self, roi, raster, feedback : QgsProcessingFeedback):
 
         self.roi = roi
         self.raster = raster
         self.feedback = feedback
         self.params = None
-        
+
         self.image = self.readImage()
-        
+
         # These parameters have associated property
         self._figure = None
         self._mtf = None
         self._lsf = None
         self._esf = None
         self._isValid = True
-    
+
     @abstractmethod
     def figure(self) -> list[Figure]:
         # To be defined in subclasses
@@ -83,7 +83,7 @@ class Mtf(ABC):
     def computeEsf(self) -> np.ndarray:
         # To be defined in subclasses
         pass
-        
+
     @property
     def esf(self):
         if self._esf is None:
@@ -101,18 +101,18 @@ class Mtf(ABC):
     def computeLsf (self) -> np.ndarray:
         # To be defined in subclasses
         pass
-    
+
     @property
     def lsf(self):
         if self._lsf is None:
             self._lsf = self.computeLsf()
         return self._lsf
-        
+
     @abstractmethod
     def computeMtf(self) -> np.ndarray:
         # To be defined in subclasses
         pass
-    
+
     @property
     def mtf(self):
         if self._mtf is None:
@@ -125,6 +125,6 @@ class Mtf(ABC):
         band = self.raster.GetRasterBand(1)
         image = np.float64(band.ReadAsArray(0, 0, cols, rows))
         return remove_nan_borders(image)
-    
+
     def getRoi(self):
         return self.roi

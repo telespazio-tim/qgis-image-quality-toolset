@@ -1,6 +1,6 @@
 # Makefile for QGIS Image Quality Toolset Plugin
 
-.PHONY: build clean install test help
+.PHONY: build clean install test test-local help hooks
 
 # Plugin name and version
 PLUGIN_NAME = image_quality_toolset
@@ -39,6 +39,7 @@ help:
 	@echo "  clean   - Clean build artifacts"
 	@echo "  install - Install the plugin to QGIS (requires QGIS installation)"
 	@echo "  test    - Run tests using tox (recommended)"
+	@echo "  hooks   - Install the git hooks (pre-commit and pre-push)"
 
 build: clean
 	@echo "Building plugin version $(VERSION)..."
@@ -64,6 +65,11 @@ install: build
 	@mkdir -p ~/.local/share/QGIS/QGIS3/profiles/default/python/plugins/$(PLUGIN_NAME)
 	@unzip -o $(DIST_DIR)/$(PLUGIN_NAME).$(VERSION).zip -d ~/.local/share/QGIS/QGIS3/profiles/default/python/plugins/
 	@echo "Plugin installed to QGIS."
+
+hooks:
+	@echo "Installing git hooks..."
+	@pre-commit install
+	@echo "Git hooks installed."
 
 test:
 	@echo "Running tests with tox (this is the recommended way)..."
