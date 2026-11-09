@@ -26,7 +26,7 @@ from qgis.core import (
     QgsProcessingFeedback,
 )
 from qgis.gui import QgsDockWidget
-from qgis.PyQt.QtCore import QEvent, QRectF, QSize, Qt
+from qgis.PyQt.QtCore import QEvent, QRectF, QSize, Qt, QTimer
 from qgis.PyQt.QtGui import QPainter
 from qgis.PyQt.QtWidgets import (
     QDialog,
@@ -107,6 +107,11 @@ class PlotWindow(QgsDockWidget):
         self.parameters = None
         self.algorithmId = None
         self._tasks = {}
+        # coalesce bursts of geometryChanged (edit rollback/undo, vertex drags) into one rerun
+        self._roi_timer = QTimer(self)
+        self._roi_timer.setSingleShot(True)
+        self._roi_timer.setInterval(300)
+        self._roi_timer.timeout.connect(self._rerun)
         self._all_messages = []
         self._last_error_message = None
 
@@ -287,6 +292,11 @@ class PlotWindow(QgsDockWidget):
         """
         Called whenever the algorithm region of interest has changed
         """
+        # deferred: running Processing here crashed QGIS when closing it (edit rollback
+        # emits geometryChanged while the project is being destroyed)
+        self._roi_timer.start()
+
+    def _rerun(self):
         feedback = QgsProcessingFeedback()
         context = dataobjects.createContext(feedback)
         algorithm = QgsApplication.processingRegistry().createAlgorithmById(
