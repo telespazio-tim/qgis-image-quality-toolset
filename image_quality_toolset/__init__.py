@@ -144,6 +144,7 @@ class ImageQualityToolSet:
             self.provider = None
 
         if self.dock_widget:
+            self.dock_widget.cancel_tasks()
             self.iface.removeDockWidget(self.dock_widget)
             self.dock_widget = None
 

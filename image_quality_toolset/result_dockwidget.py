@@ -297,21 +297,40 @@ class PlotWindow(QgsDockWidget):
         self._roi_timer.start()
 
     def _rerun(self):
+        try:
+            roi = self.mtf.getRoi()
+            roi.geometryChanged  # raises RuntimeError if the layer was deleted
+        except RuntimeError:
+            return
         feedback = QgsProcessingFeedback()
         context = dataobjects.createContext(feedback)
         algorithm = QgsApplication.processingRegistry().createAlgorithmById(
             self.algorithmId
         )
+        # a rerun must not append a report row: one row per ROI drag step would pile up
+        # and concurrent writes to the same GPKG can lock
+        parameters = dict(self.parameters)
+        parameters[algorithm.OUTPUT_DIRECTORY] = ""
 
-        task = QgsProcessingAlgRunnerTask(algorithm, self.parameters, context, feedback)
-        self.mtf.getRoi().geometryChanged.connect(feedback.cancel)
+        task = QgsProcessingAlgRunnerTask(algorithm, parameters, context, feedback)
+        roi.geometryChanged.connect(feedback.cancel)
 
         self._tasks[task] = (context, feedback, algorithm)
 
         def onTaskFinished():
-            del self._tasks[task]
+            try:
+                roi.geometryChanged.disconnect(feedback.cancel)
+            except (RuntimeError, TypeError):
+                pass
+            self._tasks.pop(task, None)
 
         task.taskCompleted.connect(onTaskFinished)
         task.taskTerminated.connect(onTaskFinished)
 
         QgsApplication.taskManager().addTask(task)
+
+    def cancel_tasks(self):
+        """Stop pending and running reruns (plugin unload)."""
+        self._roi_timer.stop()
+        for _context, feedback, _algorithm in list(self._tasks.values()):
+            feedback.cancel()

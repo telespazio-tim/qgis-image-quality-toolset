@@ -18,6 +18,8 @@ import os
 from typing import Optional
 
 import matplotlib.pyplot as plt
+from matplotlib.figure import Figure
+from ..tools.figure_api import PltFigure
 import numpy as np
 from scipy import stats
 from scipy.stats import linregress
@@ -112,7 +114,8 @@ def estimate_angle_from_bridge(
     if expert_mode and debug_dir:
         os.makedirs(debug_dir, exist_ok=True)
 
-        fig, axes = plt.subplots(1, 4, figsize=(20, 5))
+        fig = Figure(figsize=(20, 5))
+        axes = fig.subplots(1, 4)
         fig.suptitle(f"estimate_angle_from_bridge — estimated angle: {angle:.2f}°")
 
         axes[0].imshow(img_norm, cmap="gray")
@@ -137,9 +140,8 @@ def estimate_angle_from_bridge(
         axes[3].legend(fontsize=8)
         axes[3].axis("off")
 
-        plt.tight_layout()
+        fig.tight_layout()
         fig.savefig(os.path.join(debug_dir, "angle_estimation_steps.png"), dpi=150, bbox_inches="tight")
-        plt.close(fig)
 
     return float(angle)
 
@@ -585,8 +587,8 @@ class MtfBridge(Mtf):
         self.yo_input[start:end] = 1
 
         return np.array([self.x_lsf, self.y_lsf])
-    
-    
+
+
 
     def computeMtf(self):
         """
@@ -719,7 +721,8 @@ class MtfBridge(Mtf):
         else:
             name = 'Across Track'
 
-        self._figure = plt.figure(figsize=(25, 15), dpi=100)
+        plt = PltFigure(figsize=(25, 15), dpi=100)
+        self._figure = plt.fig
         plt.suptitle(f"{name} MTF Results (Bridge Method)", fontsize=28, fontweight='bold')
 
         # --- Subplot 1: Measured vs ideal rect input ---
@@ -840,7 +843,8 @@ class MtfBridge(Mtf):
         a3_b = np.where(self.x_esf == self.a3)
         ox_esf = self.x_esf[np.take(a3_b, 0)]
 
-        self._figure2 = plt.figure(figsize=(25, 15), dpi=100)
+        plt = PltFigure(figsize=(25, 15), dpi=100)
+        self._figure2 = plt.fig
         plt.subplots_adjust(hspace=0.5)
 
         if self.MTF_direction == 'AL':

@@ -26,7 +26,7 @@ from scipy.optimize import OptimizeWarning
 from scipy import interpolate, linalg
 from osgeo import gdal
 import warnings
-import matplotlib.pyplot as plt
+from matplotlib.figure import Figure
 
 
 def sigmoid(x, a, b, l, s):
@@ -113,7 +113,8 @@ class Transect:
             return False, False
 
         if expert_mode and debug_dir:
-            fig, axes = plt.subplots(1, 2, figsize=(12, 5))
+            fig = Figure(figsize=(12, 5))
+            axes = fig.subplots(1, 2)
 
             # Left panel: Data and fitted sigmoid
             axes[0].scatter(self.__X, self.__Y, c='blue', s=20, alpha=0.7, label='Data points')
@@ -143,12 +144,11 @@ class Transect:
             axes[1].set_title(f'Fit Residuals\nRMSE: {np.sqrt(np.mean(residuals**2)):.4f}')
             axes[1].grid(True, alpha=0.3)
 
-            plt.tight_layout()
+            fig.tight_layout()
 
             import os
             os.makedirs(debug_dir, exist_ok=True)
             fig.savefig(os.path.join(debug_dir, f'sigmoid_fit_row_{int(self.Row):04d}.png'), dpi=150)
-            plt.close(fig)
 
         return popt, pcov
 

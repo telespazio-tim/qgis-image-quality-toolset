@@ -15,7 +15,7 @@
 # -------------------------------------------------------------------------
 
 from osgeo import gdal
-import matplotlib.pyplot as plt
+from matplotlib.figure import Figure
 import numpy as np
 from scipy import ndimage
 from scipy.stats import binned_statistic
@@ -297,7 +297,8 @@ class SNR :
 
     def figure(self):
         """Plot SNR analysis results in a 2x2 grid."""
-        fig, axs = plt.subplots(2, 2, figsize=(20, 16))
+        fig = Figure(figsize=(20, 16))
+        axs = fig.subplots(2, 2)
         props = dict(boxstyle='round', facecolor='wheat', alpha=0.5)
 
         # ---------------------------------------------------------------

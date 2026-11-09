@@ -27,6 +27,7 @@ root_dir = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(root_dir)
 
 from ..tools.esf_models import sigmoide, esf_tanh, esf_fermi, esf_gauss_exp_param, esf_erf, esf_loess, esf_to_eq_space_polynomial
+from ..tools.figure_api import PltFigure
 from ..tools.oversampling_function import rotate_mat
 from .mtf import Mtf
 from .mtf_common import (
@@ -582,7 +583,7 @@ class MtfKnifeEdge(Mtf):  # M Sample origin for statistics
             u = x
         self.tot_bin = np.max(bin)
         '''
-        <arr_diff_m> Statistics: 
+        <arr_diff_m> Statistics:
                       - average par bin
                       - std par bin
                       - median par bin
@@ -665,7 +666,7 @@ class MtfKnifeEdge(Mtf):  # M Sample origin for statistics
         ''''
         R_a, x_a, self.nuage, self.x, self.nuage_BIN_STD, self.nuage_BIN_CARD, self.number_of_records = recupR(
                     self.target, self.direction)
-        
+
         '''
 
     @staticmethod
@@ -1317,7 +1318,8 @@ class MtfKnifeEdge(Mtf):  # M Sample origin for statistics
         else:
             name = 'Across Track'
 
-        self._figure = plt.figure(figsize=(25, 15), dpi=100)
+        plt = PltFigure(figsize=(25, 15), dpi=100)
+        self._figure = plt.fig
 
         plt.suptitle(
             f"{name} MTF Results",
@@ -1389,7 +1391,7 @@ class MtfKnifeEdge(Mtf):  # M Sample origin for statistics
             f"Sampling: {self.sampling:.2f}\n"
             f"Number of lines : {self.ligne}\n"
             f"Number of columns : {self.colonnes}\n"
-            f"Rotation angle : {self.angle:.2f}\n" 
+            f"Rotation angle : {self.angle:.2f}\n"
             f"Length of the ESF : {length}\n"
             f"MTF @ Nyquist : {self.MTF_NYQ:.2f}\n"
             f"MTF 30 : {self.MTF30:.2f}\n"
@@ -1510,7 +1512,8 @@ class MtfKnifeEdge(Mtf):  # M Sample origin for statistics
         a3_b = np.where(self.x_esf == self.a3)
         ox_esf = self.x_esf[np.take(a3_b, 0)]
 
-        self._figure2 = plt.figure(figsize=(25, 15), dpi=100)
+        plt = PltFigure(figsize=(25, 15), dpi=100)
+        self._figure2 = plt.fig
 
         plt.subplots_adjust(hspace=0.5)
 
