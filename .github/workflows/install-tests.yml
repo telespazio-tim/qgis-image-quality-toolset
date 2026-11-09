@@ -2,10 +2,9 @@ name: install-tests
 
 on:
   push:
-    branches: [develop]
+    branches: ["**"]
     tags: ["v*"]
   pull_request:
-    branches: [develop]
 
 jobs:
   # Fast checks that need no QGIS: bandit security audit, flake8 error checks,
