@@ -327,6 +327,18 @@ Fill in the image (**Raster layer**, **Band number**), the ROI (**Area of intere
 
 Click **Run**: the results are shown in the results panel on the right of QGIS.
 
+### 5.5 Video demonstrations
+
+Short screen recordings of each method, from ROI preparation to the results panel (files in [`docs/`](docs/)):
+
+| Method | Video |
+|---|---|
+| Knife Edge MTF ([2.1](#21-knife-edge-mtf)) | [`docs/knife_edge_mtf_demo.mp4`](docs/knife_edge_mtf_demo.mp4) |
+| Bridge (Pulse) MTF ([2.2](#22-bridge-pulse-mtf)) | [`docs/bridge_mtf_demo.mp4`](docs/bridge_mtf_demo.mp4) |
+| SNR estimator ([2.3](#23-snr-estimator)) | [`docs/snr_demo.mp4`](docs/snr_demo.mp4) |
+
+Other documents in [`docs/`](docs/): the [user documentation (PDF)](docs/AI4QCP-TPZ-004-User%20Documentation_v1.0.pdf) and the [`getting_started.ipynb`](docs/getting_started.ipynb) notebook.
+
 ---
 
 ## 6. Outputs
