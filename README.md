@@ -329,13 +329,19 @@ Click **Run**: the results are shown in the results panel on the right of QGIS.
 
 ### 5.5 Video demonstrations
 
-Short screen recordings of each method, from ROI preparation to the results panel (files in [`docs/`](docs/)):
+Short screen recordings of each method, from ROI preparation to the results panel:
 
-| Method | Video |
-|---|---|
-| Knife Edge MTF ([2.1](#21-knife-edge-mtf)) | [`docs/knife_edge_mtf_demo.mp4`](https://github.com/telespazio-tim/qgis-image-quality-toolset/raw/main/docs/knife_edge_mtf_demo.mp4) |
-| Bridge (Pulse) MTF ([2.2](#22-bridge-pulse-mtf)) | [`docs/bridge_mtf_demo.mp4`](https://github.com/telespazio-tim/qgis-image-quality-toolset/raw/main/docs/bridge_mtf_demo.mp4) |
-| SNR estimator ([2.3](#23-snr-estimator)) | [`docs/snr_demo.mp4`](https://github.com/telespazio-tim/qgis-image-quality-toolset/raw/main/docs/snr_demo.mp4) |
+**Knife Edge MTF**
+
+https://github.com/user-attachments/assets/02fde28d-3ba0-47bf-8916-74b57795ea08
+
+**Bridge MTF**
+
+https://github.com/user-attachments/assets/d3971a42-42a0-4fab-902f-4251083a72dd
+
+**SNR estimator**
+
+https://github.com/user-attachments/assets/e4c365f1-6f72-4a7a-8d4b-9d6ec397cce4
 
 Other documents in [`docs/`](docs/): the [user documentation (PDF)](docs/AI4QCP-TPZ-004-User%20Documentation_v1.0.pdf) and the [`getting_started.ipynb`](docs/getting_started.ipynb) notebook.
 
