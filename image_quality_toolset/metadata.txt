@@ -26,7 +26,6 @@ homepage=https://github.com/telespazio-tim/qgis-image-quality-toolset
 tracker=https://github.com/telespazio-tim/qgis-image-quality-toolset/issues
 license=GPL-3
 license_file=LICENSE
-supportsQt6=True
 hasProcessingProvider=yes
 experimental=False
 deprecated=False
