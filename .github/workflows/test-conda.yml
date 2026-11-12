@@ -41,14 +41,13 @@ jobs:
         run: |
           conda install -y "qgis=${{ matrix.qgis }}.*" numpy scipy matplotlib scikit-image pip
           pip install loess==2.1.2
-      # conda-forge qgis on Windows keeps its Python bindings under Library/
-      - name: QGIS paths (Windows)
-        if: runner.os == 'Windows'
-        run: |
-          echo "PYTHONPATH=$CONDA_PREFIX\\Library\\python;$CONDA_PREFIX\\Library\\python\\plugins" >> "$GITHUB_ENV"
-          echo "QGIS_PREFIX_PATH=$CONDA_PREFIX\\Library" >> "$GITHUB_ENV"
       - name: Smoke test and run algorithms (from source)
         run: |
+          # conda-forge qgis on Windows keeps its Python bindings under Library/
+          if [ "$RUNNER_OS" = Windows ]; then
+            export PYTHONPATH="$CONDA_PREFIX\\Library\\python;$CONDA_PREFIX\\Library\\python\\plugins"
+            export QGIS_PREFIX_PATH="$CONDA_PREFIX\\Library"
+          fi
           python test/test_install.py
           python test/test_algorithms.py
       # Install from the zip as a user would: remove the dependencies from the environment, forbid pip
@@ -63,6 +62,10 @@ jobs:
           path: packs
       - name: Test the plugin zip
         run: |
+          if [ "$RUNNER_OS" = Windows ]; then
+            export PYTHONPATH="$CONDA_PREFIX\\Library\\python;$CONDA_PREFIX\\Library\\python\\plugins"
+            export QGIS_PREFIX_PATH="$CONDA_PREFIX\\Library"
+          fi
           pip uninstall -y loess scikit-image imageio tifffile lazy_loader networkx
           if python -c "import loess" 2>/dev/null; then echo "loess still in the environment" >&2; exit 1; fi
           bash tools/test_zip.sh python
