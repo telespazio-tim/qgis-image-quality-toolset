@@ -329,7 +329,11 @@ Click **Run**: the results are shown in the results panel on the right of QGIS.
 
 ### 5.5 Video demonstrations
 
-Short screen recordings of each method, from ROI preparation to the results panel:
+Short screen recordings of each method, from installation to the results panel:
+
+**Plugin Installation**
+
+https://github.com/user-attachments/assets/e12a8a26-8321-4f2a-a6b3-68e2528eba99
 
 **Knife Edge MTF**
 
