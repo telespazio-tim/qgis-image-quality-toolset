@@ -1,0 +1,72 @@
+name: build
+
+on: workflow_call
+
+jobs:
+  # Fast checks that need no QGIS: bandit security audit, flake8 error checks,
+  # Qt6-incompatible enums, and the layout/metadata of the zip.
+  lint:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Bandit security audit
+        run: |
+          python -m pip install bandit
+          python -m bandit -r image_quality_toolset
+      - name: Flake8
+        run: |
+          python -m pip install flake8
+          python -m flake8 .
+      - run: python3 test/check_qt6_enums.py
+      - run: make build && python3 test/check_zip.py dist/*.zip
+
+  # Wheel packs: loess and scikit-image (compiled, so one pack per platform and Python), downloaded by the
+  # plugin at first run. numpy/scipy/matplotlib come from QGIS. Pythons: QGIS 3 ships 3.9-3.13, QGIS 4 3.12-3.14.
+  # tags = wheel platform tags for pip (macos-15 / ubuntu-22.04 = oldest runners, widest compatibility)
+  packs:
+    name: packs (${{ matrix.platform }})
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - {os: ubuntu-22.04, platform: linux-x64, tags: "manylinux2014_x86_64 manylinux_2_28_x86_64"}
+          - {os: windows-latest, platform: win-x64, tags: "win_amd64"}
+          - {os: macos-15, platform: macos-arm64, tags: "macosx_11_0_arm64 macosx_12_0_arm64 macosx_13_0_arm64 macosx_14_0_arm64 macosx_15_0_arm64"}
+          - {os: macos-15-intel, platform: macos-x64, tags: "macosx_10_13_x86_64 macosx_10_15_x86_64 macosx_11_0_x86_64 macosx_12_0_x86_64 macosx_13_0_x86_64 macosx_14_0_x86_64 macosx_15_0_x86_64"}
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - shell: bash
+        run: |
+          python tools/build_zip.py packs packs ${{ matrix.platform }} 3.9,3.10,3.11,3.12,3.13,3.14 ${{ matrix.tags }} | tee -a "$GITHUB_STEP_SUMMARY"
+          ls -l packs
+      - uses: actions/upload-artifact@v4
+        with:
+          name: packs-${{ matrix.platform }}
+          path: packs/*.zip
+
+  # The plugin zip users install: no dependencies inside, deps-sha256.txt lists the packs of every platform.
+  package:
+    needs: packs
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: packs-*
+          path: packs
+          merge-multiple: true
+      - run: |
+          V=$(grep '^version=' image_quality_toolset/metadata.txt | cut -d= -f2)
+          python3 tools/build_zip.py plugin "out/image_quality_toolset-$V.zip" packs
+          python3 test/check_zip.py out/*.zip
+      - uses: actions/upload-artifact@v4
+        with:
+          name: plugin-zip
+          path: out/*.zip

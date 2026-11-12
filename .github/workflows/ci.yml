@@ -1,0 +1,49 @@
+name: install-tests
+
+on:
+  push:
+    branches: ["**"]
+    tags: ["v*"]
+  pull_request:
+
+# A newer push supersedes the running one, except on tags (a release must finish).
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ !startsWith(github.ref, 'refs/tags/') }}
+
+jobs:
+  # lint, wheel packs, plugin zip
+  build:
+    uses: ./.github/workflows/build.yml
+
+  # conda-forge QGIS install tests + wheel pack import checks
+  conda:
+    needs: build
+    uses: ./.github/workflows/test-conda.yml
+
+  # official QGIS dmg + apt QGIS, not blocking
+  native:
+    needs: build
+    if: ${{ !cancelled() }}
+    uses: ./.github/workflows/test-native.yml
+
+  # On a tag vX.Y: attach the plugin zip and the wheel packs the plugin downloads (the URL contains vX.Y).
+  release:
+    needs: [build, conda]
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: "{packs-*,plugin-zip}"
+          path: release
+          merge-multiple: true
+      - env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          V=$(grep '^version=' image_quality_toolset/metadata.txt | cut -d= -f2)
+          [ "$GITHUB_REF_NAME" = "v$V" ] || { echo "tag $GITHUB_REF_NAME does not match metadata version $V" >&2; exit 1; }
+          gh release create "$GITHUB_REF_NAME" release/*.zip --generate-notes
