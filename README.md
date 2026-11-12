@@ -664,6 +664,7 @@ All remaining Python files, including the plugin entry point, QGIS algorithm wra
 
 | Version | Main changes |
 |---|---|
+| 1.3 | Fixes a crash on QGIS exit and the thread safety of figures and ROI reruns (debounced rerun on ROI change); pre-commit/pre-push hooks and flake8; install-tests run on every branch and pull request; demo videos in the README |
 | 1.2 | Fixes the Bandit security findings that led to the withdrawal of 1.1 (https-only dependency downloads, logged version-lookup failures); Bandit audit in pre-commit and CI; clearer error messages on an unusable ROI or input and on a figure that cannot be saved; otherwise identical to 1.1 |
 | 1.1 | (withdrawn because of Bandit findings, see 1.2) QGIS 4 / Qt 6 support; dependencies from a checked bundle instead of `pip`; fixes for recent NumPy versions and for macOS; Knife Edge and Bridge methods fixed with `SCALE = 1` (raw DN); Bridge method fixed with non-rectangular ROIs; ROIs with no CRS accepted for raw images; results panel fix when the ROI is given as a file |
 | 1.0 | Initial release: Knife Edge, Bridge and SNR methods, GeoPackage report, command-line interface |
