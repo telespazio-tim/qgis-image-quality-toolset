@@ -1,0 +1,103 @@
+name: test-conda
+
+on: workflow_call
+
+jobs:
+  # conda-forge QGIS, first from source then from the plugin zip (as a user installs it).
+  install:
+    name: install (${{ matrix.os }}, qgis${{ matrix.qgis }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-22.04, ubuntu-24.04, ubuntu-26.04, windows-latest, macos-15, macos-15-intel, macos-26]  # linux / win64 / osx (arm64 + intel)
+        qgis: ["3", "4"]
+        exclude:
+          - {os: macos-15-intel, qgis: "4"}  # failing after 46 min, not generated
+        include:  # which wheel packs each runner tests
+          - {os: ubuntu-22.04, platform: linux-x64}
+          - {os: ubuntu-24.04, platform: linux-x64}
+          - {os: ubuntu-26.04, platform: linux-x64}
+          - {os: windows-latest, platform: win-x64}
+          - {os: macos-15, platform: macos-arm64}
+          - {os: macos-26, platform: macos-arm64}
+          - {os: macos-15-intel, platform: macos-x64}
+          # conda-forge rebuilt libprotobuf (build _4, newer abseil): qgis 3.44 then fails with
+          # "DLL load failed while importing _core" on Windows. Pin the previous build, drop once fixed upstream.
+          - {os: windows-latest, qgis: "3", pin: "libprotobuf=7.35.1=*_3"}
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        shell: bash -el {0}
+    env:
+      QT_QPA_PLATFORM: offscreen
+    steps:
+      - uses: actions/checkout@v4
+      - name: Show OS version
+        run: uname -a; if [ "$RUNNER_OS" = macOS ]; then sw_vers; fi
+      - uses: conda-incubator/setup-miniconda@v3
+        with:
+          miniforge-version: latest
+          channels: conda-forge
+          channel-priority: strict
+          activate-environment: mtf
+      - name: Install QGIS and dependencies
+        env:
+          PIN: ${{ matrix.pin }}
+        run: |
+          conda install -y "qgis=${{ matrix.qgis }}.*" numpy scipy matplotlib scikit-image pip ${PIN:+"$PIN"}
+          pip install loess==2.1.2
+      - name: Smoke test and run algorithms (from source)
+        run: |
+          # conda-forge qgis on Windows keeps its Python bindings under Library/
+          if [ "$RUNNER_OS" = Windows ]; then
+            export PYTHONPATH="$CONDA_PREFIX\\Library\\python;$CONDA_PREFIX\\Library\\python\\plugins"
+            export QGIS_PREFIX_PATH="$CONDA_PREFIX\\Library"
+          fi
+          python test/test_install.py
+          python test/test_algorithms.py
+      # Install from the zip as a user would: remove the dependencies from the environment, forbid pip
+      # downloads, serve the wheel packs locally, then start the plugin (it downloads and verifies its pack).
+      - uses: actions/download-artifact@v4
+        with:
+          name: plugin-zip
+          path: out
+      - uses: actions/download-artifact@v4
+        with:
+          name: packs-${{ matrix.platform }}
+          path: packs
+      - name: Test the plugin zip
+        run: |
+          if [ "$RUNNER_OS" = Windows ]; then
+            export PYTHONPATH="$CONDA_PREFIX\\Library\\python;$CONDA_PREFIX\\Library\\python\\plugins"
+            export QGIS_PREFIX_PATH="$CONDA_PREFIX\\Library"
+          fi
+          pip uninstall -y loess scikit-image imageio tifffile lazy_loader networkx
+          if python -c "import loess" 2>/dev/null; then echo "loess still in the environment" >&2; exit 1; fi
+          bash tools/test_zip.sh python
+
+  # Every wheel pack imports under its Python on the real OS (no QGIS: numpy and scipy from PyPI).
+  bundle-compat:
+    name: bundle-compat (${{ matrix.platform }}, python ${{ matrix.python }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-22.04, windows-latest, macos-15, macos-15-intel]
+        python: ["3.9", "3.10", "3.11", "3.12", "3.13", "3.14"]
+        include:
+          - {os: ubuntu-22.04, platform: linux-x64}
+          - {os: windows-latest, platform: win-x64}
+          - {os: macos-15, platform: macos-arm64}
+          - {os: macos-15-intel, platform: macos-x64}
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+      - uses: actions/download-artifact@v4
+        with:
+          name: packs-${{ matrix.platform }}
+          path: packs
+      - run: python -m pip install numpy scipy
+      - run: python test/check_bundle_imports.py packs/*.zip
+        shell: bash
