@@ -21,9 +21,9 @@ jobs:
           - {os: macos-15, platform: macos-arm64}
           - {os: macos-26, platform: macos-arm64}
           - {os: macos-15-intel, platform: macos-x64}
-          # conda-forge rebuilt libgdal-core 3.13.3 (build _6): qgis 3.44 then fails with
+          # conda-forge rebuilt libprotobuf (build _4, newer abseil): qgis 3.44 then fails with
           # "DLL load failed while importing _core" on Windows. Pin the previous build, drop once fixed upstream.
-          - {os: windows-latest, qgis: "3", pin: "libgdal-core=3.13.3=*_5"}
+          - {os: windows-latest, qgis: "3", pin: "libprotobuf=7.35.1=*_3"}
     runs-on: ${{ matrix.os }}
     defaults:
       run:
